@@ -1,4 +1,4 @@
-import { DadosFinanceiros, Transacao, Categoria, Investimento, ReceitaConfig } from '@/types/finance';
+import { DadosFinanceiros, Transacao, Categoria, Investimento, ReceitaConfig, Mensalidade, FechamentoFaturaConfig, OrcamentoMesConfig } from '@/types/finance';
 import { format, subMonths, addMonths } from 'date-fns';
 
 const STORAGE_KEY = 'financas_pessoais';
@@ -78,13 +78,28 @@ function criarDadosIniciais(): DadosFinanceiros {
     ],
   };
 
-  return { transacoes, categorias, investimento, receitaConfig };
+  return {
+    transacoes,
+    categorias,
+    investimento,
+    receitaConfig,
+    mensalidades: [],
+    fechamentoFatura: { diaPadrao: 4, diaVencimento: 15, overridesMes: {} },
+    orcamentoMes: { overridesMes: {} },
+  };
 }
 
 export function carregarDados(): DadosFinanceiros {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Migration: add new fields if missing
+      if (!parsed.mensalidades) parsed.mensalidades = [];
+      if (!parsed.fechamentoFatura) parsed.fechamentoFatura = { diaPadrao: 4, diaVencimento: 15, overridesMes: {} };
+      if (!parsed.orcamentoMes) parsed.orcamentoMes = { overridesMes: {} };
+      return parsed;
+    }
   } catch {}
   const dados = criarDadosIniciais();
   salvarDados(dados);

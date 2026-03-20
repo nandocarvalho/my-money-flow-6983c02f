@@ -1,5 +1,6 @@
-import { Transacao, Investimento, HistoricoInvestimento } from '@/types/finance';
+import { Transacao, Investimento, HistoricoInvestimento, DadosFinanceiros } from '@/types/finance';
 import { addMonths, format } from 'date-fns';
+import { mesFaturaCartao } from './fechamentoFatura';
 
 export function gerarParcelas(
   baseTransacao: Omit<Transacao, 'id' | 'parcela'>,
@@ -46,29 +47,77 @@ export function projetarInvestimentos(
   return historico;
 }
 
-export function calcularSaldoMes(transacoes: Transacao[], mes: string): {
+export function calcularSaldoMes(transacoes: Transacao[], mes: string, dados?: DadosFinanceiros): {
   receitas: number;
   despesas: number;
   saldo: number;
   despesasPagas: number;
   despesasPendentes: number;
 } {
-  const doMes = transacoes.filter(t => t.data.startsWith(mes));
-  const receitas = doMes.filter(t => t.tipo === 'receita').reduce((s, t) => s + t.valor, 0);
-  const despesas = doMes.filter(t => t.tipo === 'despesa').reduce((s, t) => s + t.valor, 0);
-  const despesasPagas = doMes.filter(t => t.tipo === 'despesa' && t.status === 'pago').reduce((s, t) => s + t.valor, 0);
-  const despesasPendentes = doMes.filter(t => t.tipo === 'despesa' && t.status === 'pendente').reduce((s, t) => s + t.valor, 0);
+  let despesasList: Transacao[];
+
+  if (dados) {
+    // For despesas with cartao, use fatura logic
+    despesasList = transacoes.filter(t => {
+      if (t.tipo !== 'despesa') return false;
+      if (t.formaPagamento === 'cartao') {
+        return mesFaturaCartao(t.data, dados.fechamentoFatura) === mes;
+      }
+      return t.data.startsWith(mes);
+    });
+  } else {
+    despesasList = transacoes.filter(t => t.tipo === 'despesa' && t.data.startsWith(mes));
+  }
+
+  const receitasDoMes = transacoes.filter(t => t.tipo === 'receita' && t.data.startsWith(mes));
+  const receitas = receitasDoMes.reduce((s, t) => s + t.valor, 0);
+  const despesas = despesasList.reduce((s, t) => s + t.valor, 0);
+  const despesasPagas = despesasList.filter(t => t.status === 'pago').reduce((s, t) => s + t.valor, 0);
+  const despesasPendentes = despesasList.filter(t => t.status === 'pendente').reduce((s, t) => s + t.valor, 0);
 
   return { receitas, despesas, saldo: receitas - despesas, despesasPagas, despesasPendentes };
 }
 
-export function calcularGastoPorCategoria(transacoes: Transacao[], mes: string) {
-  const despesasDoMes = transacoes.filter(t => t.data.startsWith(mes) && t.tipo === 'despesa');
+export function calcularGastoPorCategoria(transacoes: Transacao[], mes: string, dados?: DadosFinanceiros) {
+  let despesasDoMes: Transacao[];
+
+  if (dados) {
+    despesasDoMes = transacoes.filter(t => {
+      if (t.tipo !== 'despesa') return false;
+      if (t.formaPagamento === 'cartao') {
+        return mesFaturaCartao(t.data, dados.fechamentoFatura) === mes;
+      }
+      return t.data.startsWith(mes);
+    });
+  } else {
+    despesasDoMes = transacoes.filter(t => t.data.startsWith(mes) && t.tipo === 'despesa');
+  }
+
   const gastos: Record<string, number> = {};
   despesasDoMes.forEach(t => {
     gastos[t.categoriaId] = (gastos[t.categoriaId] || 0) + t.valor;
   });
   return gastos;
+}
+
+export function getLimiteMesCategoria(dados: DadosFinanceiros, categoriaId: string, mes: string): number {
+  const override = dados.orcamentoMes.overridesMes[mes]?.[categoriaId];
+  if (override !== undefined) return override;
+  const cat = dados.categorias.find(c => c.id === categoriaId);
+  return cat?.limite ?? 0;
+}
+
+export function getDespesasDoMesPorCategoria(transacoes: Transacao[], mes: string, categoriaId: string, dados?: DadosFinanceiros): Transacao[] {
+  if (dados) {
+    return transacoes.filter(t => {
+      if (t.tipo !== 'despesa' || t.categoriaId !== categoriaId) return false;
+      if (t.formaPagamento === 'cartao') {
+        return mesFaturaCartao(t.data, dados.fechamentoFatura) === mes;
+      }
+      return t.data.startsWith(mes);
+    });
+  }
+  return transacoes.filter(t => t.data.startsWith(mes) && t.tipo === 'despesa' && t.categoriaId === categoriaId);
 }
 
 export function formatarMoeda(valor: number): string {

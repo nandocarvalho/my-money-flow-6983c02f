@@ -13,6 +13,7 @@ import Categorias from "@/pages/Categorias";
 import Patrimonio from "@/pages/Patrimonio";
 import Relatorios from "@/pages/Relatorios";
 import Configuracoes from "@/pages/Configuracoes";
+import Mensalidades from "@/pages/Mensalidades";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
               <Route path="/nova-despesa" element={<NovaDespesa />} />
               <Route path="/nova-receita" element={<NovaReceita />} />
               <Route path="/categorias" element={<Categorias />} />
+              <Route path="/mensalidades" element={<Mensalidades />} />
               <Route path="/patrimonio" element={<Patrimonio />} />
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
