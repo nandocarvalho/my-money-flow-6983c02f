@@ -319,8 +319,8 @@ export default function Lancamentos() {
 }
 
 // Inline mensalidade creation dialog
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'; // re-import ok in same scope
+import { Input } from '@/components/ui/input'; // re-import ok
 import { Mensalidade } from '@/types/finance';
 
 function NovaMensalidadeInline({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
