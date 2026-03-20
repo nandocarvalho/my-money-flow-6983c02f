@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { DadosFinanceiros } from '@/types/finance';
 import { carregarDados, salvarDados } from '@/utils/localStorage';
 import { gerarReceitasAutomaticas } from '@/utils/receitasAutomaticas';
+import { gerarTransacoesMensalidades } from '@/utils/mensalidadesUtils';
 import { format } from 'date-fns';
 
 interface FinanceContextType {
@@ -17,11 +18,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const mesAtual = format(new Date(), 'yyyy-MM');
-    const novas = gerarReceitasAutomaticas(dados, mesAtual);
-    if (novas.length > 0) {
+    const receitasNovas = gerarReceitasAutomaticas(dados, mesAtual);
+    const mensalidadesNovas = gerarTransacoesMensalidades(dados, mesAtual);
+    const todasNovas = [...receitasNovas, ...mensalidadesNovas];
+    if (todasNovas.length > 0) {
       const atualizado = {
         ...dados,
-        transacoes: [...dados.transacoes, ...novas],
+        transacoes: [...dados.transacoes, ...todasNovas],
       };
       salvarDados(atualizado);
       setDados(atualizado);
