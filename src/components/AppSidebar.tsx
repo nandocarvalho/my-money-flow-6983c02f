@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, List, MinusCircle, PlusCircle, Tags, TrendingUp, BarChart3, Settings } from 'lucide-react';
+import { LayoutDashboard, List, MinusCircle, PlusCircle, Tags, TrendingUp, BarChart3, Settings, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
@@ -7,6 +7,7 @@ const menuItems = [
   { to: '/lancamentos', label: 'Lançamentos', icon: List },
   { to: '/nova-despesa', label: 'Nova Despesa', icon: MinusCircle },
   { to: '/nova-receita', label: 'Nova Receita', icon: PlusCircle },
+  { to: '/mensalidades', label: 'Mensalidades', icon: CalendarDays },
   { to: '/categorias', label: 'Categorias', icon: Tags },
   { to: '/patrimonio', label: 'Patrimônio', icon: TrendingUp },
   { to: '/relatorios', label: 'Relatórios', icon: BarChart3 },
@@ -33,9 +34,7 @@ export default function AppSidebar() {
               to={item.to}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                active
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-sidebar-foreground hover:bg-sidebar-accent'
+                active ? 'bg-primary text-primary-foreground' : 'text-sidebar-foreground hover:bg-sidebar-accent'
               )}
             >
               <item.icon className="h-4 w-4" />
