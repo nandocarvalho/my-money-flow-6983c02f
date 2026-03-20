@@ -54,6 +54,7 @@ export interface Mensalidade {
   ativa: boolean;
   // Overrides por mês: { "2026-03": { valor: 150, diaVencimento: 10 } }
   overridesMes: Record<string, { valor?: number; diaVencimento?: number }>;
+  mesesInativos?: string[];
 }
 
 export interface FechamentoFaturaConfig {

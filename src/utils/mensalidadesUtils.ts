@@ -10,6 +10,8 @@ export function gerarTransacoesMensalidades(dados: DadosFinanceiros, mes: string
     if (!m.ativa) continue;
     if (mes < m.mesInicio) continue;
     if (m.mesFim && mes > m.mesFim) continue;
+    // Check per-month inactivation
+    if (m.mesesInativos?.includes(mes)) continue;
 
     // Verifica se já existe transação desta mensalidade neste mês
     const jaExiste = dados.transacoes.some(

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
 import { calcularSaldoMes, calcularGastoPorCategoria, formatarMoeda, getLimiteMesCategoria, getDespesasDoMesPorCategoria } from '@/utils/financialCalculations';
 import { format, addMonths, subMonths } from 'date-fns';
@@ -14,12 +14,18 @@ import { ArrowUpRight, ArrowDownRight, Wallet, MinusCircle, PlusCircle, Trending
 import { toast } from 'sonner';
 
 export default function Dashboard() {
-  const { dados, atualizarDados } = useFinance();
+  const { dados, atualizarDados, garantirTransacoesMes } = useFinance();
   const [mesRef, setMesRef] = useState(new Date());
   const mesAtual = format(mesRef, 'yyyy-MM');
+  const mesLabel = format(mesRef, "MMMM 'de' yyyy", { locale: ptBR });
+
+  // Generate receitas/mensalidades for the viewed month
+  useEffect(() => {
+    garantirTransacoesMes(mesAtual);
+  }, [mesAtual, garantirTransacoesMes]);
+
   const resumo = calcularSaldoMes(dados.transacoes, mesAtual, dados);
   const gastosPorCategoria = calcularGastoPorCategoria(dados.transacoes, mesAtual, dados);
-  const mesLabel = format(mesRef, "MMMM 'de' yyyy", { locale: ptBR });
 
   // Receitas dialog
   const [receitasDialog, setReceitasDialog] = useState(false);
@@ -183,7 +189,6 @@ export default function Dashboard() {
                     </button>
                   </div>
                 </div>
-                {/* Green base (available), red fill (used) */}
                 <div className="relative h-2 w-full rounded-full bg-[hsl(var(--success)/0.3)] overflow-hidden">
                   <div
                     className="h-full rounded-full bg-destructive transition-all"

@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
 import { formatarMoeda } from '@/utils/financialCalculations';
 import { mesFaturaCartao } from '@/utils/fechamentoFatura';
@@ -10,19 +10,20 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { ChevronLeft, ChevronRight, CreditCard, DollarSign, Receipt, Layers, Plus, Upload, ArrowUpDown, CalendarDays } from 'lucide-react';
 import NovoLancamentoDialog from '@/components/NovoLancamentoDialog';
 import CsvImportDialog from '@/components/CsvImportDialog';
+import LancamentoDetailDialog from '@/components/LancamentoDetailDialog';
+import NovaMensalidadeDialog from '@/components/NovaMensalidadeDialog';
+import { Transacao } from '@/types/finance';
 
 type Ordenacao = 'data' | 'valor' | 'categoria' | 'status';
 type Agrupamento = 'tipo' | 'categoria' | 'pagamento' | 'nenhum';
 
 export default function Lancamentos() {
-  const { dados, atualizarDados } = useFinance();
+  const { dados, atualizarDados, garantirTransacoesMes } = useFinance();
   const [mesRef, setMesRef] = useState(new Date());
   const [filtroCartao, setFiltroCartao] = useState(false);
   const [filtroMensalidade, setFiltroMensalidade] = useState(false);
@@ -31,9 +32,20 @@ export default function Lancamentos() {
   const [novoDialogOpen, setNovoDialogOpen] = useState(false);
   const [novoDialogTipo, setNovoDialogTipo] = useState<'avista' | 'parcelado'>('avista');
   const [csvDialogOpen, setCsvDialogOpen] = useState(false);
+  const [detailTransacao, setDetailTransacao] = useState<Transacao | null>(null);
+  const [novaMensalidadeDialog, setNovaMensalidadeDialog] = useState(false);
 
   const mesKey = format(mesRef, 'yyyy-MM');
   const mesLabel = format(mesRef, "MMMM 'de' yyyy", { locale: ptBR });
+
+  useEffect(() => {
+    garantirTransacoesMes(mesKey);
+  }, [mesKey, garantirTransacoesMes]);
+
+  // Get mensalidades inativadas no mês para mostrar no final
+  const mensalidadesInativadasMes = useMemo(() => {
+    return dados.mensalidades.filter(m => m.mesesInativos?.includes(mesKey));
+  }, [dados.mensalidades, mesKey]);
 
   const lancamentosMes = useMemo(() => {
     let filtered = dados.transacoes.filter(t => {
@@ -46,7 +58,6 @@ export default function Lancamentos() {
       return t.data.startsWith(mesKey);
     });
 
-    // Sort
     filtered.sort((a, b) => {
       switch (ordenacao) {
         case 'valor': return b.valor - a.valor;
@@ -72,8 +83,8 @@ export default function Lancamentos() {
         case 'pagamento':
           key = t.formaPagamento === 'cartao' ? '💳 Cartão' : t.formaPagamento === 'pix' ? '⚡ PIX' : t.formaPagamento === 'boleto' ? '📄 Boleto' : '💵 Dinheiro';
           break;
-        default: // tipo
-          key = t.parcela ? '📦 Parcelados' : '💰 À Vista';
+        default:
+          key = t.origemMensalidade ? '📅 Mensalidades' : t.parcela ? '📦 Parcelados' : '💰 À Vista';
       }
       if (!groups[key]) groups[key] = [];
       groups[key].push(t);
@@ -84,10 +95,12 @@ export default function Lancamentos() {
   const grupos = agrupar(lancamentosMes);
 
   const totalGeral = lancamentosMes.reduce((s, t) => s + t.valor, 0);
-  const aVista = lancamentosMes.filter(t => !t.parcela);
+  const aVista = lancamentosMes.filter(t => !t.parcela && !t.origemMensalidade);
   const parcelados = lancamentosMes.filter(t => !!t.parcela);
+  const mensalidades = lancamentosMes.filter(t => !!t.origemMensalidade);
   const totalAVista = aVista.reduce((s, t) => s + t.valor, 0);
   const totalParcelado = parcelados.reduce((s, t) => s + t.valor, 0);
+  const totalMensalidades = mensalidades.reduce((s, t) => s + t.valor, 0);
 
   const toggleStatus = (id: string) => {
     const novas = dados.transacoes.map(t =>
@@ -96,16 +109,16 @@ export default function Lancamentos() {
     atualizarDados({ ...dados, transacoes: novas });
   };
 
-  const excluir = (id: string) => {
-    atualizarDados({ ...dados, transacoes: dados.transacoes.filter(t => t.id !== id) });
-  };
-
   const renderItem = (t: typeof lancamentosMes[0]) => {
     const cat = dados.categorias.find(c => c.id === t.categoriaId);
     return (
-      <Card key={t.id} className="group">
+      <Card key={t.id} className="group cursor-pointer hover:ring-1 ring-primary/20 transition-all" onClick={() => setDetailTransacao(t)}>
         <CardContent className="p-4 flex items-center gap-3">
-          <Checkbox checked={t.status === 'pago'} onCheckedChange={() => toggleStatus(t.id)} />
+          <Checkbox
+            checked={t.status === 'pago'}
+            onCheckedChange={(e) => { e && toggleStatus(t.id); }}
+            onClick={(e) => e.stopPropagation()}
+          />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="font-medium text-sm truncate">{t.descricao}</span>
@@ -124,7 +137,6 @@ export default function Lancamentos() {
               {t.status === 'pago' ? 'Pago' : 'Pendente'}
             </Badge>
           </div>
-          <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 text-destructive h-8 w-8 p-0" onClick={() => excluir(t.id)}>×</Button>
         </CardContent>
       </Card>
     );
@@ -178,8 +190,8 @@ export default function Lancamentos() {
         </div>
       </div>
 
-      {/* Totals */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* Totals - 4 cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <DollarSign className="h-5 w-5 text-destructive" />
@@ -209,15 +221,25 @@ export default function Lancamentos() {
             <Plus className="h-4 w-4 text-primary" />
           </CardContent>
         </Card>
+        <Card className="cursor-pointer hover:ring-1 ring-primary/30" onClick={() => setNovaMensalidadeDialog(true)}>
+          <CardContent className="p-4 flex items-center gap-3">
+            <CalendarDays className="h-5 w-5 text-primary" />
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground">Mensalidades</p>
+              <p className="font-bold text-sm">{formatarMoeda(totalMensalidades)}</p>
+            </div>
+            <Plus className="h-4 w-4 text-primary" />
+          </CardContent>
+        </Card>
       </div>
 
       {/* CSV Import button */}
       <Button variant="outline" size="sm" onClick={() => setCsvDialogOpen(true)} className="gap-2">
-        <Upload className="h-4 w-4" /> Importar CSV
+        <Upload className="h-4 w-4" /> Importar Lctos Cred a Vista
       </Button>
 
       {/* Grouped items */}
-      {lancamentosMes.length === 0 ? (
+      {lancamentosMes.length === 0 && mensalidadesInativadasMes.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center text-muted-foreground">Nenhum lançamento neste mês</CardContent>
         </Card>
@@ -229,6 +251,45 @@ export default function Lancamentos() {
               {items.map(renderItem)}
             </div>
           ))}
+
+          {/* Mensalidades inativadas */}
+          {mensalidadesInativadasMes.length > 0 && (
+            <div className="space-y-2">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">📅 Mensalidades Inativadas ({mensalidadesInativadasMes.length})</h2>
+              {mensalidadesInativadasMes.map(m => {
+                const cat = dados.categorias.find(c => c.id === m.categoriaId);
+                return (
+                  <Card key={m.id} className="opacity-40">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm truncate line-through">{m.descricao}</span>
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Inativa neste mês</Badge>
+                        </div>
+                        <span className="text-xs text-muted-foreground">{cat?.icone} {cat?.nome}</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground line-through">{formatarMoeda(m.valorPadrao)}</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => {
+                          const novas = dados.mensalidades.map(x => {
+                            if (x.id !== m.id) return x;
+                            return { ...x, mesesInativos: (x.mesesInativos || []).filter(mi => mi !== mesKey) };
+                          });
+                          atualizarDados({ ...dados, mensalidades: novas });
+                          toast.success('Mensalidade reativada para este mês');
+                        }}
+                      >
+                        Reativar
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -243,8 +304,16 @@ export default function Lancamentos() {
       <CsvImportDialog
         open={csvDialogOpen}
         onOpenChange={setCsvDialogOpen}
-        mesRef={mesKey}
       />
+
+      <LancamentoDetailDialog
+        transacao={detailTransacao}
+        open={!!detailTransacao}
+        onOpenChange={(v) => { if (!v) setDetailTransacao(null); }}
+        mesKey={mesKey}
+      />
+
+      <NovaMensalidadeDialog open={novaMensalidadeDialog} onOpenChange={setNovaMensalidadeDialog} />
     </div>
   );
 }
