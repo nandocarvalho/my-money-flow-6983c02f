@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { DadosFinanceiros } from '@/types/finance';
 import { carregarDados, salvarDados } from '@/utils/localStorage';
 import { gerarReceitasAutomaticas } from '@/utils/receitasAutomaticas';
@@ -9,40 +9,51 @@ interface FinanceContextType {
   dados: DadosFinanceiros;
   atualizarDados: (novos: DadosFinanceiros) => void;
   recarregar: () => void;
+  garantirTransacoesMes: (mes: string) => void;
 }
 
 const FinanceContext = createContext<FinanceContextType | null>(null);
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [dados, setDados] = useState<DadosFinanceiros>(() => carregarDados());
+  const mesesGerados = useRef<Set<string>>(new Set());
+
+  const garantirTransacoesMes = useCallback((mes: string) => {
+    if (mesesGerados.current.has(mes)) return;
+    mesesGerados.current.add(mes);
+
+    setDados(prev => {
+      const receitasNovas = gerarReceitasAutomaticas(prev, mes);
+      const mensalidadesNovas = gerarTransacoesMensalidades(prev, mes);
+      const todasNovas = [...receitasNovas, ...mensalidadesNovas];
+      if (todasNovas.length > 0) {
+        const atualizado = { ...prev, transacoes: [...prev.transacoes, ...todasNovas] };
+        salvarDados(atualizado);
+        return atualizado;
+      }
+      return prev;
+    });
+  }, []);
 
   useEffect(() => {
     const mesAtual = format(new Date(), 'yyyy-MM');
-    const receitasNovas = gerarReceitasAutomaticas(dados, mesAtual);
-    const mensalidadesNovas = gerarTransacoesMensalidades(dados, mesAtual);
-    const todasNovas = [...receitasNovas, ...mensalidadesNovas];
-    if (todasNovas.length > 0) {
-      const atualizado = {
-        ...dados,
-        transacoes: [...dados.transacoes, ...todasNovas],
-      };
-      salvarDados(atualizado);
-      setDados(atualizado);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    garantirTransacoesMes(mesAtual);
+  }, [garantirTransacoesMes]);
 
   const atualizarDados = useCallback((novos: DadosFinanceiros) => {
+    // Reset generated months so mensalidades/receitas regenerate if needed
+    mesesGerados.current.clear();
     salvarDados(novos);
     setDados(novos);
   }, []);
 
   const recarregar = useCallback(() => {
+    mesesGerados.current.clear();
     setDados(carregarDados());
   }, []);
 
   return (
-    <FinanceContext.Provider value={{ dados, atualizarDados, recarregar }}>
+    <FinanceContext.Provider value={{ dados, atualizarDados, recarregar, garantirTransacoesMes }}>
       {children}
     </FinanceContext.Provider>
   );
