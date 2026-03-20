@@ -16,6 +16,7 @@ import { ChevronLeft, ChevronRight, CreditCard, DollarSign, Receipt, Layers, Plu
 import NovoLancamentoDialog from '@/components/NovoLancamentoDialog';
 import CsvImportDialog from '@/components/CsvImportDialog';
 import LancamentoDetailDialog from '@/components/LancamentoDetailDialog';
+import NovaMensalidadeDialog from '@/components/NovaMensalidadeDialog';
 import { Transacao } from '@/types/finance';
 
 type Ordenacao = 'data' | 'valor' | 'categoria' | 'status';
