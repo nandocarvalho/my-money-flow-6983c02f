@@ -9,9 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Link } from 'react-router-dom';
 import { ArrowUpRight, ArrowDownRight, Wallet, MinusCircle, PlusCircle, TrendingUp, ChevronLeft, ChevronRight, CreditCard, Layers, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
+import { Transacao } from '@/types/finance';
+import NovoLancamentoDialog from '@/components/NovoLancamentoDialog';
+import LancamentoDetailDialog from '@/components/LancamentoDetailDialog';
 
 export default function Dashboard() {
   const { dados, atualizarDados, garantirTransacoesMes } = useFinance();
@@ -19,7 +21,6 @@ export default function Dashboard() {
   const mesAtual = format(mesRef, 'yyyy-MM');
   const mesLabel = format(mesRef, "MMMM 'de' yyyy", { locale: ptBR });
 
-  // Generate receitas/mensalidades for the viewed month
   useEffect(() => {
     garantirTransacoesMes(mesAtual);
   }, [mesAtual, garantirTransacoesMes]);
@@ -41,6 +42,13 @@ export default function Dashboard() {
   // Orcamento edit dialog
   const [orcEditCat, setOrcEditCat] = useState<string | null>(null);
   const [orcEditValor, setOrcEditValor] = useState('');
+
+  // Novo lançamento dialog (inline)
+  const [novoDialogOpen, setNovoDialogOpen] = useState(false);
+  const [novoDialogTipo, setNovoDialogTipo] = useState<'avista' | 'parcelado'>('avista');
+
+  // Transaction detail from category view
+  const [detailTransacao, setDetailTransacao] = useState<Transacao | null>(null);
 
   const adicionarReceita = () => {
     const valor = parseFloat(novaReceitaForm.valor.replace(',', '.'));
@@ -172,11 +180,15 @@ export default function Dashboard() {
             const pct = limite > 0 ? Math.min((gasto / limite) * 100, 100) : 0;
 
             return (
-              <div key={cat.id} className="space-y-1.5">
+              <div
+                key={cat.id}
+                className="space-y-1.5 cursor-pointer rounded-lg p-3 -mx-3 hover:bg-muted/50 transition-colors"
+                onClick={() => setCatDetailId(cat.id)}
+              >
                 <div className="flex items-center justify-between text-sm">
-                  <button className="font-medium hover:underline text-left" onClick={() => setCatDetailId(cat.id)}>
+                  <span className="font-medium">
                     {cat.icone} {cat.nome}
-                  </button>
+                  </span>
                   <div className="flex items-center gap-2">
                     <span className={gasto > limite ? 'text-destructive font-semibold' : 'text-muted-foreground'}>
                       {formatarMoeda(gasto)} / {formatarMoeda(limite)}
@@ -184,7 +196,10 @@ export default function Dashboard() {
                     <span className={`text-xs ${saldo >= 0 ? 'text-[hsl(var(--success))]' : 'text-destructive'}`}>
                       Saldo: {formatarMoeda(saldo)}
                     </span>
-                    <button onClick={(e) => { e.stopPropagation(); setOrcEditCat(cat.id); setOrcEditValor(limite.toString()); }}>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setOrcEditCat(cat.id); setOrcEditValor(limite.toString()); }}
+                      className="p-1 rounded hover:bg-muted"
+                    >
                       <Pencil className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                     </button>
                   </div>
@@ -201,37 +216,25 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Quick action buttons */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <Button asChild size="lg" className="h-auto py-4 flex-col gap-2">
-          <Link to="/nova-despesa">
-            <MinusCircle className="h-5 w-5" />
-            Nova Despesa
-          </Link>
+      {/* Quick action buttons — open inline dialogs */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Button size="lg" className="h-auto py-4 flex-col gap-2" onClick={() => { setNovoDialogTipo('avista'); setNovoDialogOpen(true); }}>
+          <MinusCircle className="h-5 w-5" />
+          Nova Despesa
         </Button>
-        <Button asChild variant="outline" size="lg" className="h-auto py-4 flex-col gap-2 border-primary/30 text-primary">
-          <Link to="/nova-despesa?tipo=cartao-avista">
-            <CreditCard className="h-5 w-5" />
-            + Créd. À Vista
-          </Link>
+        <Button variant="outline" size="lg" className="h-auto py-4 flex-col gap-2 border-primary/30 text-primary" onClick={() => { setNovoDialogTipo('avista'); setNovoDialogOpen(true); }}>
+          <CreditCard className="h-5 w-5" />
+          + Créd. À Vista
         </Button>
-        <Button asChild variant="outline" size="lg" className="h-auto py-4 flex-col gap-2 border-primary/30 text-primary">
-          <Link to="/nova-despesa?tipo=cartao-parcelado">
-            <Layers className="h-5 w-5" />
-            + Créd. Parcelado
-          </Link>
+        <Button variant="outline" size="lg" className="h-auto py-4 flex-col gap-2 border-primary/30 text-primary" onClick={() => { setNovoDialogTipo('parcelado'); setNovoDialogOpen(true); }}>
+          <Layers className="h-5 w-5" />
+          + Créd. Parcelado
         </Button>
-        <Button asChild variant="secondary" size="lg" className="h-auto py-4 flex-col gap-2">
-          <Link to="/nova-receita">
+        <Button variant="secondary" size="lg" className="h-auto py-4 flex-col gap-2" asChild>
+          <a href="/nova-receita">
             <PlusCircle className="h-5 w-5" />
             Nova Receita
-          </Link>
-        </Button>
-        <Button asChild variant="outline" size="lg" className="h-auto py-4 flex-col gap-2">
-          <Link to="/lancamentos">
-            <ArrowDownRight className="h-5 w-5" />
-            Lançamentos
-          </Link>
+          </a>
         </Button>
       </div>
 
@@ -247,11 +250,11 @@ export default function Dashboard() {
 
       {/* Receitas detail dialog */}
       <Dialog open={receitasDialog} onOpenChange={setReceitasDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Receitas - {mesLabel}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 max-h-80 overflow-y-auto">
+          <div className="space-y-3 flex-1 overflow-y-auto">
             {receitasMes.map(r => (
               <div key={r.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                 <div>
@@ -271,7 +274,7 @@ export default function Dashboard() {
             ))}
             {receitasMes.length === 0 && <p className="text-center text-muted-foreground text-sm py-4">Nenhuma receita neste mês</p>}
           </div>
-          <div className="border-t pt-3 space-y-2">
+          <div className="border-t pt-3 space-y-2 shrink-0">
             <p className="text-sm font-medium">{editReceitaId ? 'Editar Receita' : 'Adicionar Receita'}</p>
             <div className="grid grid-cols-2 gap-2">
               <Input placeholder="Descrição" value={novaReceitaForm.descricao} onChange={e => setNovaReceitaForm(f => ({ ...f, descricao: e.target.value }))} />
@@ -282,32 +285,37 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Category detail dialog */}
+      {/* Category detail dialog — full size */}
       <Dialog open={!!catDetailId} onOpenChange={() => setCatDetailId(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>{catDetail?.icone} {catDetail?.nome} - Detalhamento</DialogTitle>
           </DialogHeader>
-          <div className="space-y-2 max-h-80 overflow-y-auto">
+          <div className="space-y-2 flex-1 overflow-y-auto">
             {catTransacoes.length === 0 ? (
               <p className="text-center text-muted-foreground text-sm py-4">Nenhum lançamento nesta categoria</p>
             ) : catTransacoes.map(t => (
-              <div key={t.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+              <div
+                key={t.id}
+                className="flex items-center justify-between p-4 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
+                onClick={() => { setCatDetailId(null); setDetailTransacao(t); }}
+              >
                 <div>
                   <p className="text-sm font-medium">{t.descricao}</p>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>{format(new Date(t.data + 'T12:00:00'), 'dd/MM')}</span>
+                    <span>{format(new Date(t.data + 'T12:00:00'), 'dd/MM/yyyy')}</span>
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                       {t.formaPagamento === 'cartao' ? 'Cartão' : t.formaPagamento === 'pix' ? 'PIX' : t.formaPagamento === 'boleto' ? 'Boleto' : 'Dinheiro'}
                     </Badge>
                     {t.parcela && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{t.parcela.atual}/{t.parcela.total}</Badge>}
+                    {t.origemMensalidade && <Badge variant="outline" className="text-[10px] px-1.5 py-0">Mensalidade</Badge>}
                   </div>
                 </div>
                 <span className="font-semibold text-sm text-destructive">{formatarMoeda(t.valor)}</span>
               </div>
             ))}
           </div>
-          <div className="border-t pt-2 text-sm text-muted-foreground">
+          <div className="border-t pt-2 text-sm text-muted-foreground shrink-0">
             Total: <span className="font-semibold text-foreground">{formatarMoeda(catTransacoes.reduce((s, t) => s + t.valor, 0))}</span>
           </div>
         </DialogContent>
@@ -328,6 +336,23 @@ export default function Dashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Novo lançamento inline dialog */}
+      <NovoLancamentoDialog
+        open={novoDialogOpen}
+        onOpenChange={setNovoDialogOpen}
+        tipo={novoDialogTipo}
+        defaultCartao={true}
+        mesRef={mesAtual}
+      />
+
+      {/* Transaction detail (from category drill-down) */}
+      <LancamentoDetailDialog
+        transacao={detailTransacao}
+        open={!!detailTransacao}
+        onOpenChange={(v) => { if (!v) setDetailTransacao(null); }}
+        mesKey={mesAtual}
+      />
     </div>
   );
 }

@@ -41,8 +41,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, [garantirTransacoesMes]);
 
   const atualizarDados = useCallback((novos: DadosFinanceiros) => {
-    // Reset generated months so mensalidades/receitas regenerate if needed
-    mesesGerados.current.clear();
+    // Don't clear mesesGerados here — it causes race conditions.
+    // Only recarregar() should clear it (used when config changes).
     salvarDados(novos);
     setDados(novos);
   }, []);

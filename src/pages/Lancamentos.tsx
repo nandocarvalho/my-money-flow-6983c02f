@@ -42,7 +42,6 @@ export default function Lancamentos() {
     garantirTransacoesMes(mesKey);
   }, [mesKey, garantirTransacoesMes]);
 
-  // Get mensalidades inativadas no mês para mostrar no final
   const mensalidadesInativadasMes = useMemo(() => {
     return dados.mensalidades.filter(m => m.mesesInativos?.includes(mesKey));
   }, [dados.mensalidades, mesKey]);
@@ -109,10 +108,23 @@ export default function Lancamentos() {
     atualizarDados({ ...dados, transacoes: novas });
   };
 
+  // When clicking a parcela, find its group's first transaction to show parcelamento detail
+  const handleTransacaoClick = (t: Transacao) => {
+    if (t.parcela) {
+      // Find the first parcela of this group to show full parcelamento
+      const primeiraParcela = dados.transacoes
+        .filter(x => x.parcela?.grupoId === t.parcela!.grupoId)
+        .sort((a, b) => (a.parcela!.atual) - (b.parcela!.atual))[0];
+      setDetailTransacao(primeiraParcela || t);
+    } else {
+      setDetailTransacao(t);
+    }
+  };
+
   const renderItem = (t: typeof lancamentosMes[0]) => {
     const cat = dados.categorias.find(c => c.id === t.categoriaId);
     return (
-      <Card key={t.id} className="group cursor-pointer hover:ring-1 ring-primary/20 transition-all" onClick={() => setDetailTransacao(t)}>
+      <Card key={t.id} className="group cursor-pointer hover:ring-1 ring-primary/20 transition-all" onClick={() => handleTransacaoClick(t)}>
         <CardContent className="p-4 flex items-center gap-3">
           <Checkbox
             checked={t.status === 'pago'}
@@ -145,7 +157,7 @@ export default function Lancamentos() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Lançamentos</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Despesas</h1>
         <p className="text-muted-foreground text-sm">Gerencie seus pagamentos e despesas</p>
       </div>
 
