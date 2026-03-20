@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 
 const menuItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/lancamentos', label: 'Lançamentos', icon: List },
+  { to: '/despesas', label: 'Despesas', icon: List },
   { to: '/nova-despesa', label: 'Nova Despesa', icon: MinusCircle },
   { to: '/nova-receita', label: 'Nova Receita', icon: PlusCircle },
   { to: '/mensalidades', label: 'Mensalidades', icon: CalendarDays },
