@@ -168,9 +168,7 @@ export default function LancamentoDetailDialog({ transacao, open, onOpenChange, 
     return meses;
   }, [mensalidade, mensalidadeHistorico]);
 
-  // Edit mensalidade override for a specific month
-  const [editMensMonth, setEditMensMonth] = useState<string | null>(null);
-  const [editMensValor, setEditMensValor] = useState('');
+  // (editMensMonth/editMensValor moved to top of component)
 
   const saveMensOverride = () => {
     if (!editMensMonth || !mensalidade) return;
