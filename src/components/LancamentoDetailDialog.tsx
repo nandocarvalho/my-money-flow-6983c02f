@@ -48,6 +48,34 @@ export default function LancamentoDetailDialog({ transacao, open, onOpenChange, 
       .sort((a, b) => a.data.localeCompare(b.data));
   }, [transacao, dados.transacoes]);
 
+  // Mensalidade: generate projected months
+  const mensalidadeProjecao = useMemo(() => {
+    if (!transacao?.origemMensalidade) return [];
+    const m = dados.mensalidades.find(x => x.id === transacao.origemMensalidade);
+    if (!m) return [];
+    const meses: { mes: string; valor: number; status: 'pago' | 'pendente' | 'inativo' | 'projecao'; transacaoId?: string }[] = [];
+    const hojeDate = new Date();
+    const mesAtualStr = format(hojeDate, 'yyyy-MM');
+    let cursor = new Date(m.mesInicio + '-01');
+    const limite = addMonths(hojeDate, 12);
+    while (cursor <= limite) {
+      const mesStr = format(cursor, 'yyyy-MM');
+      if (m.mesFim && mesStr > m.mesFim) break;
+      const override = m.overridesMes[mesStr];
+      const valor = override?.valor ?? m.valorPadrao;
+      const isInativo = m.mesesInativos?.includes(mesStr);
+      const trans = mensalidadeHistorico.find(t => t.data.startsWith(mesStr));
+      meses.push({
+        mes: mesStr,
+        valor,
+        status: isInativo ? 'inativo' : trans ? trans.status : (mesStr <= mesAtualStr ? 'pendente' : 'projecao'),
+        transacaoId: trans?.id,
+      });
+      cursor = addMonths(cursor, 1);
+    }
+    return meses;
+  }, [transacao, dados.mensalidades, mensalidadeHistorico]);
+
   if (!transacao) return null;
 
   const isParcela = !!transacao.parcela;
