@@ -65,18 +65,16 @@ export default function Relatorios() {
             <p className="text-center text-muted-foreground py-8">Sem despesas neste mês</p>
           ) : (
             <div className="flex flex-col sm:flex-row items-center gap-6">
-              <div className="w-64 h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} innerRadius={50}>
-                      {pieData.map((d, i) => (
-                        <Cell key={i} fill={d.cor} />
-                      ))}
-                    </Pie>
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
+              <ChartContainer config={chartConfig} className="w-64 h-64">
+                <PieChart>
+                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} innerRadius={50}>
+                    {pieData.map((d, i) => (
+                      <Cell key={i} fill={d.cor} />
+                    ))}
+                  </Pie>
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                </PieChart>
+              </ChartContainer>
               <div className="space-y-2">
                 {pieData.map((d, i) => (
                   <div key={i} className="flex items-center gap-2 text-sm">
