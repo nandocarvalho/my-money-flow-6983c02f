@@ -1,12 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, List, MinusCircle, CalendarDays, BarChart3, Settings } from 'lucide-react';
+import { LayoutDashboard, List, CalendarDays, BarChart3, Settings, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
   { to: '/', icon: LayoutDashboard, label: 'Início' },
   { to: '/despesas', icon: List, label: 'Despesas' },
-  { to: '/nova-despesa', icon: MinusCircle, label: 'Despesa' },
   { to: '/mensalidades', icon: CalendarDays, label: 'Mensalid.' },
+  { to: '/historico', icon: History, label: 'Histórico' },
   { to: '/relatorios', icon: BarChart3, label: 'Relatórios' },
   { to: '/configuracoes', icon: Settings, label: 'Config' },
 ];

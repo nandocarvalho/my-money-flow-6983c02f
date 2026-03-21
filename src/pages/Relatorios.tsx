@@ -1,8 +1,9 @@
+import { useMemo } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
-import { calcularSaldoMes, calcularGastoPorCategoria, projetarInvestimentos, formatarMoeda } from '@/utils/financialCalculations';
+import { calcularSaldoMes, calcularGastoPorCategoria, formatarMoeda } from '@/utils/financialCalculations';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, ResponsiveContainer, Legend } from 'recharts';
 import { format, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -11,32 +12,42 @@ export default function Relatorios() {
   const hoje = new Date();
   const mesAtual = format(hoje, 'yyyy-MM');
 
-  const gastosCat = calcularGastoPorCategoria(dados.transacoes, mesAtual);
+  const gastosCat = calcularGastoPorCategoria(dados.transacoes, mesAtual, dados);
   const pieData = dados.categorias
     .map(c => ({ name: c.nome, value: gastosCat[c.id] || 0, cor: `hsl(${c.cor})` }))
     .filter(d => d.value > 0);
 
-  const barData = Array.from({ length: 6 }, (_, i) => {
-    const mes = format(subMonths(hoje, 5 - i), 'yyyy-MM');
-    const resumo = calcularSaldoMes(dados.transacoes, mes);
-    return {
-      mes: format(subMonths(hoje, 5 - i), 'MMM', { locale: ptBR }),
-      receitas: resumo.receitas,
-      despesas: resumo.despesas,
-    };
+  const meses6 = Array.from({ length: 6 }, (_, i) => {
+    const d = subMonths(hoje, 5 - i);
+    return { date: d, mes: format(d, 'yyyy-MM'), label: format(d, 'MMM', { locale: ptBR }) };
   });
 
-  const projecao = projetarInvestimentos(dados.investimento, 12);
-  const lineData = projecao.map(h => ({
-    mes: format(new Date(h.mes + '-01'), 'MMM/yy', { locale: ptBR }),
-    saldo: h.saldo,
-  }));
+  const barData = meses6.map(m => {
+    const resumo = calcularSaldoMes(dados.transacoes, m.mes, dados);
+    return { mes: m.label, receitas: resumo.receitas, despesas: resumo.despesas };
+  });
 
-  const chartConfig = {
+  // Category trend: line chart with each category as a line over 6 months
+  const categoryTrendData = useMemo(() => {
+    return meses6.map(m => {
+      const gastos = calcularGastoPorCategoria(dados.transacoes, m.mes, dados);
+      const entry: Record<string, any> = { mes: m.label };
+      dados.categorias.forEach(c => {
+        entry[c.nome] = gastos[c.id] || 0;
+      });
+      return entry;
+    });
+  }, [dados, meses6]);
+
+  const categoryColors = dados.categorias.map(c => ({ nome: c.nome, cor: `hsl(${c.cor})` }));
+
+  const chartConfig: Record<string, { label: string; color: string }> = {
     receitas: { label: 'Receitas', color: 'hsl(142 71% 45%)' },
     despesas: { label: 'Despesas', color: 'hsl(0 72% 51%)' },
-    saldo: { label: 'Saldo', color: 'hsl(217 91% 50%)' },
   };
+  dados.categorias.forEach(c => {
+    chartConfig[c.nome] = { label: c.nome, color: `hsl(${c.cor})` };
+  });
 
   return (
     <div className="space-y-6">
@@ -100,18 +111,28 @@ export default function Relatorios() {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Projeção de Patrimônio</CardTitle>
+          <CardTitle className="text-lg">Evolução por Categoria — Últimos 6 Meses</CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-72">
-            <LineChart data={lineData}>
+          <ChartContainer config={chartConfig} className="h-80">
+            <LineChart data={categoryTrendData}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
               <XAxis dataKey="mes" className="text-xs" />
               <YAxis className="text-xs" tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
               <ChartTooltip content={<ChartTooltipContent />} />
-              <Line type="monotone" dataKey="saldo" stroke="hsl(217 91% 50%)" strokeWidth={2} dot={{ r: 3 }} />
+              {categoryColors.map(c => (
+                <Line key={c.nome} type="monotone" dataKey={c.nome} stroke={c.cor} strokeWidth={2} dot={{ r: 3 }} />
+              ))}
             </LineChart>
           </ChartContainer>
+          <div className="flex flex-wrap gap-3 mt-3">
+            {categoryColors.map(c => (
+              <div key={c.nome} className="flex items-center gap-1.5 text-xs">
+                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: c.cor }} />
+                <span>{c.nome}</span>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>

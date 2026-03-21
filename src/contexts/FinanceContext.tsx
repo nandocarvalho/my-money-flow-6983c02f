@@ -41,10 +41,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, [garantirTransacoesMes]);
 
   const atualizarDados = useCallback((novos: DadosFinanceiros) => {
-    // Don't clear mesesGerados here — it causes race conditions.
-    // Only recarregar() should clear it (used when config changes).
-    salvarDados(novos);
-    setDados(novos);
+    setDados(prev => {
+      // If mensalidades changed, clear mesesGerados so transactions regenerate
+      if (JSON.stringify(prev.mensalidades) !== JSON.stringify(novos.mensalidades)) {
+        mesesGerados.current.clear();
+      }
+      salvarDados(novos);
+      return novos;
+    });
   }, []);
 
   const recarregar = useCallback(() => {
