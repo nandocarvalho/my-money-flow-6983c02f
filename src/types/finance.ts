@@ -34,6 +34,7 @@ export interface HistoricoInvestimento {
   saldo: number;
   taxa: number;
   rendimento: number;
+  fechado?: boolean;
 }
 
 export interface ReceitaConfig {
@@ -52,7 +53,6 @@ export interface Mensalidade {
   mesInicio: string; // YYYY-MM
   mesFim?: string; // YYYY-MM (opcional)
   ativa: boolean;
-  // Overrides por mês: { "2026-03": { valor: 150, diaVencimento: 10 } }
   overridesMes: Record<string, { valor?: number; diaVencimento?: number }>;
   mesesInativos?: string[];
 }
@@ -60,12 +60,10 @@ export interface Mensalidade {
 export interface FechamentoFaturaConfig {
   diaPadrao: number;
   diaVencimento: number;
-  // Override por mês: { "2026-03": 5 }
   overridesMes: Record<string, number>;
 }
 
 export interface OrcamentoMesConfig {
-  // Override de limite por categoria por mês: { "2026-03": { "cat-mercado": 1000 } }
   overridesMes: Record<string, Record<string, number>>;
 }
 

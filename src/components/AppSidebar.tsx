@@ -1,15 +1,14 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, List, MinusCircle, PlusCircle, Tags, TrendingUp, BarChart3, Settings, CalendarDays } from 'lucide-react';
+import { LayoutDashboard, List, Tags, TrendingUp, BarChart3, Settings, CalendarDays, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/despesas', label: 'Despesas', icon: List },
-  { to: '/nova-despesa', label: 'Nova Despesa', icon: MinusCircle },
-  { to: '/nova-receita', label: 'Nova Receita', icon: PlusCircle },
   { to: '/mensalidades', label: 'Mensalidades', icon: CalendarDays },
   { to: '/categorias', label: 'Categorias', icon: Tags },
   { to: '/patrimonio', label: 'Patrimônio', icon: TrendingUp },
+  { to: '/historico', label: 'Histórico', icon: History },
   { to: '/relatorios', label: 'Relatórios', icon: BarChart3 },
   { to: '/configuracoes', label: 'Configurações', icon: Settings },
 ];

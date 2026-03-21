@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowUpRight, ArrowDownRight, Wallet, MinusCircle, PlusCircle, TrendingUp, ChevronLeft, ChevronRight, CreditCard, Layers, Pencil } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Wallet, MinusCircle, TrendingUp, ChevronLeft, ChevronRight, CreditCard, Layers, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { Transacao } from '@/types/finance';
 import NovoLancamentoDialog from '@/components/NovoLancamentoDialog';
@@ -88,6 +88,18 @@ export default function Dashboard() {
     atualizarDados({ ...dados, orcamentoMes: { ...dados.orcamentoMes, overridesMes: newOverrides } });
     toast.success('Orçamento do mês atualizado!');
     setOrcEditCat(null);
+  };
+
+  const handleCatTransacaoClick = (t: Transacao) => {
+    setCatDetailId(null);
+    if (t.parcela) {
+      const primeiraParcela = dados.transacoes
+        .filter(x => x.parcela?.grupoId === t.parcela!.grupoId)
+        .sort((a, b) => (a.parcela!.atual) - (b.parcela!.atual))[0];
+      setDetailTransacao(primeiraParcela || t);
+    } else {
+      setDetailTransacao(t);
+    }
   };
 
   return (
@@ -186,9 +198,7 @@ export default function Dashboard() {
                 onClick={() => setCatDetailId(cat.id)}
               >
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">
-                    {cat.icone} {cat.nome}
-                  </span>
+                  <span className="font-medium">{cat.icone} {cat.nome}</span>
                   <div className="flex items-center gap-2">
                     <span className={gasto > limite ? 'text-destructive font-semibold' : 'text-muted-foreground'}>
                       {formatarMoeda(gasto)} / {formatarMoeda(limite)}
@@ -216,8 +226,8 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Quick action buttons — open inline dialogs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* Quick action buttons */}
+      <div className="grid grid-cols-3 gap-3">
         <Button size="lg" className="h-auto py-4 flex-col gap-2" onClick={() => { setNovoDialogTipo('avista'); setNovoDialogOpen(true); }}>
           <MinusCircle className="h-5 w-5" />
           Nova Despesa
@@ -229,12 +239,6 @@ export default function Dashboard() {
         <Button variant="outline" size="lg" className="h-auto py-4 flex-col gap-2 border-primary/30 text-primary" onClick={() => { setNovoDialogTipo('parcelado'); setNovoDialogOpen(true); }}>
           <Layers className="h-5 w-5" />
           + Créd. Parcelado
-        </Button>
-        <Button variant="secondary" size="lg" className="h-auto py-4 flex-col gap-2" asChild>
-          <a href="/nova-receita">
-            <PlusCircle className="h-5 w-5" />
-            Nova Receita
-          </a>
         </Button>
       </div>
 
@@ -285,7 +289,7 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Category detail dialog — full size */}
+      {/* Category detail dialog */}
       <Dialog open={!!catDetailId} onOpenChange={() => setCatDetailId(null)}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
@@ -298,7 +302,7 @@ export default function Dashboard() {
               <div
                 key={t.id}
                 className="flex items-center justify-between p-4 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
-                onClick={() => { setCatDetailId(null); setDetailTransacao(t); }}
+                onClick={() => handleCatTransacaoClick(t)}
               >
                 <div>
                   <p className="text-sm font-medium">{t.descricao}</p>
@@ -337,22 +341,8 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Novo lançamento inline dialog */}
-      <NovoLancamentoDialog
-        open={novoDialogOpen}
-        onOpenChange={setNovoDialogOpen}
-        tipo={novoDialogTipo}
-        defaultCartao={true}
-        mesRef={mesAtual}
-      />
-
-      {/* Transaction detail (from category drill-down) */}
-      <LancamentoDetailDialog
-        transacao={detailTransacao}
-        open={!!detailTransacao}
-        onOpenChange={(v) => { if (!v) setDetailTransacao(null); }}
-        mesKey={mesAtual}
-      />
+      <NovoLancamentoDialog open={novoDialogOpen} onOpenChange={setNovoDialogOpen} tipo={novoDialogTipo} defaultCartao={true} mesRef={mesAtual} />
+      <LancamentoDetailDialog transacao={detailTransacao} open={!!detailTransacao} onOpenChange={(v) => { if (!v) setDetailTransacao(null); }} mesKey={mesAtual} />
     </div>
   );
 }

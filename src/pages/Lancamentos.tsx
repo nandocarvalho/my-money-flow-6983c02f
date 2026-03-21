@@ -20,7 +20,6 @@ import NovaMensalidadeDialog from '@/components/NovaMensalidadeDialog';
 import { Transacao } from '@/types/finance';
 
 type Ordenacao = 'data' | 'valor' | 'categoria' | 'status';
-type Agrupamento = 'tipo' | 'categoria' | 'pagamento' | 'nenhum';
 
 export default function Lancamentos() {
   const { dados, atualizarDados, garantirTransacoesMes } = useFinance();
@@ -28,7 +27,6 @@ export default function Lancamentos() {
   const [filtroCartao, setFiltroCartao] = useState(false);
   const [filtroMensalidade, setFiltroMensalidade] = useState(false);
   const [ordenacao, setOrdenacao] = useState<Ordenacao>('data');
-  const [agrupamento, setAgrupamento] = useState<Agrupamento>('tipo');
   const [novoDialogOpen, setNovoDialogOpen] = useState(false);
   const [novoDialogTipo, setNovoDialogTipo] = useState<'avista' | 'parcelado'>('avista');
   const [csvDialogOpen, setCsvDialogOpen] = useState(false);
@@ -69,37 +67,22 @@ export default function Lancamentos() {
     return filtered;
   }, [dados.transacoes, mesKey, filtroCartao, filtroMensalidade, ordenacao, dados.fechamentoFatura]);
 
-  const agrupar = (items: typeof lancamentosMes) => {
-    if (agrupamento === 'nenhum') return { 'Todos': items };
-    const groups: Record<string, typeof items> = {};
-    items.forEach(t => {
-      let key: string;
-      switch (agrupamento) {
-        case 'categoria':
-          const cat = dados.categorias.find(c => c.id === t.categoriaId);
-          key = cat ? `${cat.icone} ${cat.nome}` : 'Sem categoria';
-          break;
-        case 'pagamento':
-          key = t.formaPagamento === 'cartao' ? '💳 Cartão' : t.formaPagamento === 'pix' ? '⚡ PIX' : t.formaPagamento === 'boleto' ? '📄 Boleto' : '💵 Dinheiro';
-          break;
-        default:
-          key = t.origemMensalidade ? '📅 Mensalidades' : t.parcela ? '📦 Parcelados' : '💰 À Vista';
-      }
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(t);
-    });
-    return groups;
-  };
+  // 5-group separation
+  const avistaCredito = lancamentosMes.filter(t => !t.parcela && !t.origemMensalidade && t.formaPagamento === 'cartao');
+  const parceladoCredito = lancamentosMes.filter(t => !!t.parcela && t.formaPagamento === 'cartao');
+  const mensalidades = lancamentosMes.filter(t => !!t.origemMensalidade);
+  const avistaNaoCredito = lancamentosMes.filter(t => !t.parcela && !t.origemMensalidade && t.formaPagamento !== 'cartao');
+  const parceladoNaoCredito = lancamentosMes.filter(t => !!t.parcela && t.formaPagamento !== 'cartao');
 
-  const grupos = agrupar(lancamentosMes);
+  const grupos = [
+    { key: 'avista-cred', label: '💳 À Vista Crédito', items: avistaCredito },
+    { key: 'parc-cred', label: '💳 Parcelado Crédito', items: parceladoCredito },
+    { key: 'mensalidades', label: '📅 Mensalidades', items: mensalidades },
+    { key: 'avista-ncred', label: '💰 À Vista Não Crédito', items: avistaNaoCredito },
+    { key: 'parc-ncred', label: '📦 Parcelado Não Crédito', items: parceladoNaoCredito },
+  ].filter(g => g.items.length > 0);
 
   const totalGeral = lancamentosMes.reduce((s, t) => s + t.valor, 0);
-  const aVista = lancamentosMes.filter(t => !t.parcela && !t.origemMensalidade);
-  const parcelados = lancamentosMes.filter(t => !!t.parcela);
-  const mensalidades = lancamentosMes.filter(t => !!t.origemMensalidade);
-  const totalAVista = aVista.reduce((s, t) => s + t.valor, 0);
-  const totalParcelado = parcelados.reduce((s, t) => s + t.valor, 0);
-  const totalMensalidades = mensalidades.reduce((s, t) => s + t.valor, 0);
 
   const toggleStatus = (id: string) => {
     const novas = dados.transacoes.map(t =>
@@ -108,10 +91,8 @@ export default function Lancamentos() {
     atualizarDados({ ...dados, transacoes: novas });
   };
 
-  // When clicking a parcela, find its group's first transaction to show parcelamento detail
   const handleTransacaoClick = (t: Transacao) => {
     if (t.parcela) {
-      // Find the first parcela of this group to show full parcelamento
       const primeiraParcela = dados.transacoes
         .filter(x => x.parcela?.grupoId === t.parcela!.grupoId)
         .sort((a, b) => (a.parcela!.atual) - (b.parcela!.atual))[0];
@@ -121,14 +102,14 @@ export default function Lancamentos() {
     }
   };
 
-  const renderItem = (t: typeof lancamentosMes[0]) => {
+  const renderItem = (t: Transacao) => {
     const cat = dados.categorias.find(c => c.id === t.categoriaId);
     return (
       <Card key={t.id} className="group cursor-pointer hover:ring-1 ring-primary/20 transition-all" onClick={() => handleTransacaoClick(t)}>
         <CardContent className="p-4 flex items-center gap-3">
           <Checkbox
             checked={t.status === 'pago'}
-            onCheckedChange={(e) => { e && toggleStatus(t.id); }}
+            onCheckedChange={() => toggleStatus(t.id)}
             onClick={(e) => e.stopPropagation()}
           />
           <div className="flex-1 min-w-0">
@@ -189,20 +170,9 @@ export default function Lancamentos() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-2">
-          <Select value={agrupamento} onValueChange={v => setAgrupamento(v as Agrupamento)}>
-            <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="tipo">Agrupar: Tipo</SelectItem>
-              <SelectItem value="categoria">Agrupar: Categoria</SelectItem>
-              <SelectItem value="pagamento">Agrupar: Pagamento</SelectItem>
-              <SelectItem value="nenhum">Sem agrupamento</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
       </div>
 
-      {/* Totals - 4 cards */}
+      {/* Summary cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
@@ -218,7 +188,7 @@ export default function Lancamentos() {
             <Receipt className="h-5 w-5 text-primary" />
             <div className="flex-1">
               <p className="text-xs text-muted-foreground">À Vista</p>
-              <p className="font-bold text-sm">{formatarMoeda(totalAVista)}</p>
+              <p className="font-bold text-sm">{formatarMoeda(avistaCredito.reduce((s, t) => s + t.valor, 0) + avistaNaoCredito.reduce((s, t) => s + t.valor, 0))}</p>
             </div>
             <Plus className="h-4 w-4 text-primary" />
           </CardContent>
@@ -228,7 +198,7 @@ export default function Lancamentos() {
             <Layers className="h-5 w-5 text-accent-foreground" />
             <div className="flex-1">
               <p className="text-xs text-muted-foreground">Parcelado</p>
-              <p className="font-bold text-sm">{formatarMoeda(totalParcelado)}</p>
+              <p className="font-bold text-sm">{formatarMoeda(parceladoCredito.reduce((s, t) => s + t.valor, 0) + parceladoNaoCredito.reduce((s, t) => s + t.valor, 0))}</p>
             </div>
             <Plus className="h-4 w-4 text-primary" />
           </CardContent>
@@ -238,33 +208,31 @@ export default function Lancamentos() {
             <CalendarDays className="h-5 w-5 text-primary" />
             <div className="flex-1">
               <p className="text-xs text-muted-foreground">Mensalidades</p>
-              <p className="font-bold text-sm">{formatarMoeda(totalMensalidades)}</p>
+              <p className="font-bold text-sm">{formatarMoeda(mensalidades.reduce((s, t) => s + t.valor, 0))}</p>
             </div>
             <Plus className="h-4 w-4 text-primary" />
           </CardContent>
         </Card>
       </div>
 
-      {/* CSV Import button */}
       <Button variant="outline" size="sm" onClick={() => setCsvDialogOpen(true)} className="gap-2">
         <Upload className="h-4 w-4" /> Importar Lctos Cred a Vista
       </Button>
 
-      {/* Grouped items */}
+      {/* 5 groups */}
       {lancamentosMes.length === 0 && mensalidadesInativadasMes.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center text-muted-foreground">Nenhum lançamento neste mês</CardContent>
         </Card>
       ) : (
         <div className="space-y-6">
-          {Object.entries(grupos).map(([group, items]) => (
-            <div key={group} className="space-y-2">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{group} ({items.length})</h2>
-              {items.map(renderItem)}
+          {grupos.map(g => (
+            <div key={g.key} className="space-y-2">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{g.label} ({g.items.length})</h2>
+              {g.items.map(renderItem)}
             </div>
           ))}
 
-          {/* Mensalidades inativadas */}
           {mensalidadesInativadasMes.length > 0 && (
             <div className="space-y-2">
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">📅 Mensalidades Inativadas ({mensalidadesInativadasMes.length})</h2>
@@ -305,26 +273,9 @@ export default function Lancamentos() {
         </div>
       )}
 
-      <NovoLancamentoDialog
-        open={novoDialogOpen}
-        onOpenChange={setNovoDialogOpen}
-        tipo={novoDialogTipo}
-        defaultCartao={filtroCartao}
-        mesRef={mesKey}
-      />
-
-      <CsvImportDialog
-        open={csvDialogOpen}
-        onOpenChange={setCsvDialogOpen}
-      />
-
-      <LancamentoDetailDialog
-        transacao={detailTransacao}
-        open={!!detailTransacao}
-        onOpenChange={(v) => { if (!v) setDetailTransacao(null); }}
-        mesKey={mesKey}
-      />
-
+      <NovoLancamentoDialog open={novoDialogOpen} onOpenChange={setNovoDialogOpen} tipo={novoDialogTipo} defaultCartao={filtroCartao} mesRef={mesKey} />
+      <CsvImportDialog open={csvDialogOpen} onOpenChange={setCsvDialogOpen} />
+      <LancamentoDetailDialog transacao={detailTransacao} open={!!detailTransacao} onOpenChange={(v) => { if (!v) setDetailTransacao(null); }} mesKey={mesKey} />
       <NovaMensalidadeDialog open={novaMensalidadeDialog} onOpenChange={setNovaMensalidadeDialog} />
     </div>
   );
