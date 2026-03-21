@@ -165,38 +165,7 @@ export default function LancamentoDetailDialog({ transacao, open, onOpenChange, 
   const totalParcelamento = parcelas.reduce((s, p) => s + p.valor, 0);
   const parcelasPagas = parcelas.filter(p => p.status === 'pago');
 
-  // Mensalidade: generate projected months
-  const mensalidadeProjecao = useMemo(() => {
-    if (!mensalidade) return [];
-    const meses: { mes: string; valor: number; status: 'pago' | 'pendente' | 'inativo' | 'projecao'; transacaoId?: string }[] = [];
-    const hoje = new Date();
-    const mesAtualStr = format(hoje, 'yyyy-MM');
-
-    // Show from mesInicio up to 12 months in the future
-    let cursor = new Date(mensalidade.mesInicio + '-01');
-    const limite = addMonths(hoje, 12);
-
-    while (cursor <= limite) {
-      const mesStr = format(cursor, 'yyyy-MM');
-      if (mensalidade.mesFim && mesStr > mensalidade.mesFim) break;
-
-      const override = mensalidade.overridesMes[mesStr];
-      const valor = override?.valor ?? mensalidade.valorPadrao;
-      const isInativo = mensalidade.mesesInativos?.includes(mesStr);
-      const transacao = mensalidadeHistorico.find(t => t.data.startsWith(mesStr));
-
-      meses.push({
-        mes: mesStr,
-        valor,
-        status: isInativo ? 'inativo' : transacao ? transacao.status : (mesStr <= mesAtualStr ? 'pendente' : 'projecao'),
-        transacaoId: transacao?.id,
-      });
-      cursor = addMonths(cursor, 1);
-    }
-    return meses;
-  }, [mensalidade, mensalidadeHistorico]);
-
-  // (editMensMonth/editMensValor moved to top of component)
+  // (mensalidadeProjecao moved before early return)
 
   const saveMensOverride = () => {
     if (!editMensMonth || !mensalidade) return;
