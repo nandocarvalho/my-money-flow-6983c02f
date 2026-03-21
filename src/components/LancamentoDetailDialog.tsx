@@ -26,6 +26,10 @@ export default function LancamentoDetailDialog({ transacao, open, onOpenChange, 
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ descricao: '', valor: '', data: '', categoriaId: '', formaPagamento: '' });
 
+  // Edit mensalidade override for a specific month
+  const [editMensMonth, setEditMensMonth] = useState<string | null>(null);
+  const [editMensValor, setEditMensValor] = useState('');
+
   const cat = transacao ? dados.categorias.find(c => c.id === transacao.categoriaId) : null;
   const mensalidade = transacao?.origemMensalidade ? dados.mensalidades.find(m => m.id === transacao.origemMensalidade) : null;
 
