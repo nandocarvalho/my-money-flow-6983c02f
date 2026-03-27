@@ -8,6 +8,7 @@ export interface Transacao {
   formaPagamento: 'cartao' | 'boleto' | 'pix' | 'dinheiro';
   status: 'pago' | 'pendente';
   origemMensalidade?: string; // id da mensalidade que gerou
+  cartaoId?: string; // id do cartão de crédito
   parcela?: {
     atual: number;
     total: number;
@@ -55,6 +56,7 @@ export interface Mensalidade {
   ativa: boolean;
   overridesMes: Record<string, { valor?: number; diaVencimento?: number }>;
   mesesInativos?: string[];
+  cartaoId?: string;
 }
 
 export interface FechamentoFaturaConfig {
@@ -67,6 +69,15 @@ export interface OrcamentoMesConfig {
   overridesMes: Record<string, Record<string, number>>;
 }
 
+export interface CartaoCredito {
+  id: string;
+  nome: string;
+  limite: number;
+  diaFechamento: number;
+  diaVencimento: number;
+  cor: string;
+}
+
 export interface DadosFinanceiros {
   transacoes: Transacao[];
   categorias: Categoria[];
@@ -75,4 +86,5 @@ export interface DadosFinanceiros {
   mensalidades: Mensalidade[];
   fechamentoFatura: FechamentoFaturaConfig;
   orcamentoMes: OrcamentoMesConfig;
+  cartoes: CartaoCredito[];
 }
