@@ -1,4 +1,4 @@
-import { DadosFinanceiros, Transacao, Categoria, Investimento, ReceitaConfig, Mensalidade, FechamentoFaturaConfig, OrcamentoMesConfig } from '@/types/finance';
+import { DadosFinanceiros, Transacao, Categoria, Investimento, ReceitaConfig, Mensalidade, FechamentoFaturaConfig, OrcamentoMesConfig, CartaoCredito } from '@/types/finance';
 import { format, subMonths, addMonths } from 'date-fns';
 
 const STORAGE_KEY = 'financas_pessoais';
@@ -22,23 +22,28 @@ function criarDadosIniciais(): DadosFinanceiros {
     { id: 'cat-moradia', nome: 'Moradia', limite: 2000, cor: '200 70% 50%', icone: '🏠' },
   ];
 
+  const cartaoId = 'cartao-default';
+  const cartoes: CartaoCredito[] = [
+    { id: cartaoId, nome: 'Cartão Principal', limite: 5000, diaFechamento: 4, diaVencimento: 15, cor: '221 83% 53%' },
+  ];
+
   const grupoParcelado = gerarId();
 
   const transacoes: Transacao[] = [
-    { id: gerarId(), data: `${mesAtual}-05`, valor: 450, descricao: 'Supermercado Mensal', categoriaId: 'cat-mercado', tipo: 'despesa', formaPagamento: 'cartao', status: 'pago' },
+    { id: gerarId(), data: `${mesAtual}-05`, valor: 450, descricao: 'Supermercado Mensal', categoriaId: 'cat-mercado', tipo: 'despesa', formaPagamento: 'cartao', status: 'pago', cartaoId },
     { id: gerarId(), data: `${mesAtual}-10`, valor: 150, descricao: 'Consulta médica', categoriaId: 'cat-saude', tipo: 'despesa', formaPagamento: 'pix', status: 'pendente' },
-    { id: gerarId(), data: `${mesAtual}-15`, valor: 200, descricao: 'Curso online', categoriaId: 'cat-educacao', tipo: 'despesa', formaPagamento: 'cartao', status: 'pago', parcela: { atual: 3, total: 10, grupoId: grupoParcelado } },
-    { id: gerarId(), data: `${mesAtual}-08`, valor: 120, descricao: 'Combustível', categoriaId: 'cat-transporte', tipo: 'despesa', formaPagamento: 'cartao', status: 'pago' },
+    { id: gerarId(), data: `${mesAtual}-15`, valor: 200, descricao: 'Curso online', categoriaId: 'cat-educacao', tipo: 'despesa', formaPagamento: 'cartao', status: 'pago', cartaoId, parcela: { atual: 3, total: 10, grupoId: grupoParcelado } },
+    { id: gerarId(), data: `${mesAtual}-08`, valor: 120, descricao: 'Combustível', categoriaId: 'cat-transporte', tipo: 'despesa', formaPagamento: 'cartao', status: 'pago', cartaoId },
     { id: gerarId(), data: `${mesAtual}-20`, valor: 80, descricao: 'Cinema e jantar', categoriaId: 'cat-lazer', tipo: 'despesa', formaPagamento: 'pix', status: 'pendente' },
     { id: gerarId(), data: `${mesAtual}-01`, valor: 1500, descricao: 'Aluguel', categoriaId: 'cat-moradia', tipo: 'despesa', formaPagamento: 'boleto', status: 'pago' },
     { id: gerarId(), data: `${mesAtual}-01`, valor: 5000, descricao: 'Salário', categoriaId: 'cat-mercado', tipo: 'receita', formaPagamento: 'pix', status: 'pago' },
-    { id: gerarId(), data: `${mesAnterior}-05`, valor: 520, descricao: 'Supermercado Mensal', categoriaId: 'cat-mercado', tipo: 'despesa', formaPagamento: 'cartao', status: 'pago' },
+    { id: gerarId(), data: `${mesAnterior}-05`, valor: 520, descricao: 'Supermercado Mensal', categoriaId: 'cat-mercado', tipo: 'despesa', formaPagamento: 'cartao', status: 'pago', cartaoId },
     { id: gerarId(), data: `${mesAnterior}-12`, valor: 300, descricao: 'Exame de sangue', categoriaId: 'cat-saude', tipo: 'despesa', formaPagamento: 'pix', status: 'pago' },
-    { id: gerarId(), data: `${mesAnterior}-15`, valor: 200, descricao: 'Curso online', categoriaId: 'cat-educacao', tipo: 'despesa', formaPagamento: 'cartao', status: 'pago', parcela: { atual: 2, total: 10, grupoId: grupoParcelado } },
+    { id: gerarId(), data: `${mesAnterior}-15`, valor: 200, descricao: 'Curso online', categoriaId: 'cat-educacao', tipo: 'despesa', formaPagamento: 'cartao', status: 'pago', cartaoId, parcela: { atual: 2, total: 10, grupoId: grupoParcelado } },
     { id: gerarId(), data: `${mesAnterior}-01`, valor: 1500, descricao: 'Aluguel', categoriaId: 'cat-moradia', tipo: 'despesa', formaPagamento: 'boleto', status: 'pago' },
     { id: gerarId(), data: `${mesAnterior}-01`, valor: 5000, descricao: 'Salário', categoriaId: 'cat-mercado', tipo: 'receita', formaPagamento: 'pix', status: 'pago' },
-    { id: gerarId(), data: `${mes2Atras}-05`, valor: 480, descricao: 'Supermercado Mensal', categoriaId: 'cat-mercado', tipo: 'despesa', formaPagamento: 'cartao', status: 'pago' },
-    { id: gerarId(), data: `${mes2Atras}-15`, valor: 200, descricao: 'Curso online', categoriaId: 'cat-educacao', tipo: 'despesa', formaPagamento: 'cartao', status: 'pago', parcela: { atual: 1, total: 10, grupoId: grupoParcelado } },
+    { id: gerarId(), data: `${mes2Atras}-05`, valor: 480, descricao: 'Supermercado Mensal', categoriaId: 'cat-mercado', tipo: 'despesa', formaPagamento: 'cartao', status: 'pago', cartaoId },
+    { id: gerarId(), data: `${mes2Atras}-15`, valor: 200, descricao: 'Curso online', categoriaId: 'cat-educacao', tipo: 'despesa', formaPagamento: 'cartao', status: 'pago', cartaoId, parcela: { atual: 1, total: 10, grupoId: grupoParcelado } },
     { id: gerarId(), data: `${mes2Atras}-01`, valor: 1500, descricao: 'Aluguel', categoriaId: 'cat-moradia', tipo: 'despesa', formaPagamento: 'boleto', status: 'pago' },
     { id: gerarId(), data: `${mes2Atras}-01`, valor: 5000, descricao: 'Salário', categoriaId: 'cat-mercado', tipo: 'receita', formaPagamento: 'pix', status: 'pago' },
   ];
@@ -54,6 +59,7 @@ function criarDadosIniciais(): DadosFinanceiros {
       tipo: 'despesa',
       formaPagamento: 'cartao',
       status: 'pendente',
+      cartaoId,
       parcela: { atual: i, total: 10, grupoId: grupoParcelado },
     });
   }
@@ -86,6 +92,7 @@ function criarDadosIniciais(): DadosFinanceiros {
     mensalidades: [],
     fechamentoFatura: { diaPadrao: 4, diaVencimento: 15, overridesMes: {} },
     orcamentoMes: { overridesMes: {} },
+    cartoes,
   };
 }
 
@@ -98,6 +105,25 @@ export function carregarDados(): DadosFinanceiros {
       if (!parsed.mensalidades) parsed.mensalidades = [];
       if (!parsed.fechamentoFatura) parsed.fechamentoFatura = { diaPadrao: 4, diaVencimento: 15, overridesMes: {} };
       if (!parsed.orcamentoMes) parsed.orcamentoMes = { overridesMes: {} };
+      if (!parsed.cartoes) {
+        // Migrate: create default card from existing fechamentoFatura
+        const cardId = 'cartao-default';
+        parsed.cartoes = [{
+          id: cardId,
+          nome: 'Cartão Principal',
+          limite: 5000,
+          diaFechamento: parsed.fechamentoFatura.diaPadrao || 4,
+          diaVencimento: parsed.fechamentoFatura.diaVencimento || 15,
+          cor: '221 83% 53%',
+        }];
+        // Assign cartaoId to existing card transactions
+        parsed.transacoes = parsed.transacoes.map((t: any) => {
+          if (t.formaPagamento === 'cartao' && !t.cartaoId) {
+            return { ...t, cartaoId: cardId };
+          }
+          return t;
+        });
+      }
       return parsed;
     }
   } catch {}

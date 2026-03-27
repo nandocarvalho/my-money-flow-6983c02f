@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, List, Tags, TrendingUp, BarChart3, Settings, CalendarDays, History, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, List, Tags, TrendingUp, BarChart3, Settings, CalendarDays, History, Sun, Moon, CreditCard, Layers } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,8 @@ const menuItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/despesas', label: 'Despesas', icon: List },
   { to: '/mensalidades', label: 'Mensalidades', icon: CalendarDays },
+  { to: '/cartao', label: 'Cartão de Crédito', icon: CreditCard },
+  { to: '/parcelamentos', label: 'Parcelamentos', icon: Layers },
   { to: '/categorias', label: 'Categorias', icon: Tags },
   { to: '/patrimonio', label: 'Patrimônio', icon: TrendingUp },
   { to: '/historico', label: 'Histórico', icon: History },

@@ -14,6 +14,8 @@ import Relatorios from "@/pages/Relatorios";
 import Configuracoes from "@/pages/Configuracoes";
 import Mensalidades from "@/pages/Mensalidades";
 import Historico from "@/pages/Historico";
+import CartaoCredito from "@/pages/CartaoCredito";
+import Parcelamentos from "@/pages/Parcelamentos";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +35,8 @@ const App = () => (
                 <Route path="/lancamentos" element={<Lancamentos />} />
                 <Route path="/categorias" element={<Categorias />} />
                 <Route path="/mensalidades" element={<Mensalidades />} />
+                <Route path="/cartao" element={<CartaoCredito />} />
+                <Route path="/parcelamentos" element={<Parcelamentos />} />
                 <Route path="/patrimonio" element={<Patrimonio />} />
                 <Route path="/historico" element={<Historico />} />
                 <Route path="/relatorios" element={<Relatorios />} />
