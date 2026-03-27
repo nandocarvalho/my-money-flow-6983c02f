@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
 import { formatarMoeda } from '@/utils/financialCalculations';
 import { HistoricoInvestimento } from '@/types/finance';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,29 +22,77 @@ export default function Patrimonio() {
   const [addSaldo, setAddSaldo] = useState('');
   const [addTaxa, setAddTaxa] = useState(dados.investimento.taxaRendimento.toString());
   const [addFechado, setAddFechado] = useState(false);
-  const [taxaDialog, setTaxaDialog] = useState<{ index: number; taxa: string } | null>(null);
+  const [taxaDialog, setTaxaDialog] = useState<{ mes: string; taxa: string } | null>(null);
   const [aplicarFuturos, setAplicarFuturos] = useState(false);
-  const hoje = format(new Date(), 'yyyy-MM');
-  const sorted = useMemo(() => [...historico].sort((a, b) => a.mes.localeCompare(b.mes)), [historico]);
+  const [editingSaldo, setEditingSaldo] = useState<string | null>(null);
+  const [editSaldoValue, setEditSaldoValue] = useState('');
+  const currentRowRef = useRef<HTMLTableRowElement>(null);
 
-  const updateHistoricoItem = (index: number, updates: Partial<HistoricoInvestimento>) => {
-    const copy = [...sorted];
-    copy[index] = { ...copy[index], ...updates };
-    copy[index].rendimento = Math.round(copy[index].saldo * (copy[index].taxa / 100) * 100) / 100;
-    atualizarDados({ ...dados, investimento: { ...dados.investimento, historicoMensal: copy, saldo: copy[copy.length - 1]?.saldo || dados.investimento.saldo } });
+  const hoje = format(new Date(), 'yyyy-MM');
+
+  // Sort newest first
+  const sorted = useMemo(() => {
+    const copy = [...historico];
+    // Auto-fix: mark past months as fechado
+    const mesAtual = hoje;
+    copy.forEach(h => {
+      if (h.mes < mesAtual && !h.fechado) {
+        h.fechado = true;
+      }
+    });
+    return copy.sort((a, b) => b.mes.localeCompare(a.mes));
+  }, [historico, hoje]);
+
+  // Ensure current month exists
+  useEffect(() => {
+    if (!historico.some(h => h.mes === hoje)) {
+      const lastSorted = [...historico].sort((a, b) => b.mes.localeCompare(a.mes));
+      const last = lastSorted[0];
+      const saldo = last ? last.saldo : dados.investimento.saldo;
+      const taxa = dados.investimento.taxaRendimento;
+      const rendimento = Math.round(saldo * (taxa / 100) * 100) / 100;
+      atualizarDados({
+        ...dados,
+        investimento: {
+          ...dados.investimento,
+          historicoMensal: [...historico, { mes: hoje, saldo, taxa, rendimento }],
+          saldo,
+        },
+      });
+    }
+  }, []);
+
+  // Scroll to current month
+  useEffect(() => {
+    if (currentRowRef.current) {
+      currentRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [sorted]);
+
+  // For updating, we need to find the item by mes in the original array
+  const updateByMes = (mes: string, updates: Partial<HistoricoInvestimento>) => {
+    const copy = historico.map(h => {
+      if (h.mes !== mes) return h;
+      const updated = { ...h, ...updates };
+      updated.rendimento = Math.round(updated.saldo * (updated.taxa / 100) * 100) / 100;
+      return updated;
+    });
+    const newest = [...copy].sort((a, b) => b.mes.localeCompare(a.mes));
+    atualizarDados({ ...dados, investimento: { ...dados.investimento, historicoMensal: copy, saldo: newest[0]?.saldo || dados.investimento.saldo } });
   };
 
   const confirmarTaxa = () => {
     if (!taxaDialog) return;
     const taxa = parseFloat(taxaDialog.taxa.replace(',', '.'));
     if (isNaN(taxa)) { toast.error('Taxa inválida'); return; }
-    const copy = [...sorted];
-    const start = aplicarFuturos ? taxaDialog.index : taxaDialog.index;
-    const end = aplicarFuturos ? copy.length : taxaDialog.index + 1;
-    for (let i = start; i < end; i++) {
-      copy[i] = { ...copy[i], taxa, rendimento: Math.round(copy[i].saldo * (taxa / 100) * 100) / 100 };
-    }
-    atualizarDados({ ...dados, investimento: { ...dados.investimento, historicoMensal: copy, taxaRendimento: taxa, saldo: copy[copy.length - 1]?.saldo || dados.investimento.saldo } });
+    const copy = historico.map(h => {
+      if (aplicarFuturos ? h.mes >= taxaDialog.mes : h.mes === taxaDialog.mes) {
+        return { ...h, taxa, rendimento: Math.round(h.saldo * (taxa / 100) * 100) / 100 };
+      }
+      return h;
+    });
+    const newest = [...copy].sort((a, b) => b.mes.localeCompare(a.mes));
+    atualizarDados({ ...dados, investimento: { ...dados.investimento, historicoMensal: copy, taxaRendimento: taxa, saldo: newest[0]?.saldo || dados.investimento.saldo } });
     toast.success(aplicarFuturos ? 'Taxa aplicada aos próximos' : 'Taxa atualizada');
     setTaxaDialog(null);
   };
@@ -62,10 +110,22 @@ export default function Patrimonio() {
 
   const sugerirProximoMes = () => {
     if (sorted.length === 0) return format(new Date(), 'yyyy-MM');
-    return format(addMonths(new Date(sorted[sorted.length - 1].mes + '-01'), 1), 'yyyy-MM');
+    const newest = sorted[0]; // already sorted newest first
+    return format(addMonths(new Date(newest.mes + '-01'), 1), 'yyyy-MM');
   };
 
-  const saldoAtual = sorted.length > 0 ? sorted[sorted.length - 1].saldo : dados.investimento.saldo;
+  const saveSaldoEdit = (mes: string) => {
+    const val = parseFloat(editSaldoValue.replace(',', '.'));
+    if (isNaN(val)) { toast.error('Valor inválido'); return; }
+    updateByMes(mes, { saldo: val });
+    setEditingSaldo(null);
+    toast.success('Saldo atualizado');
+  };
+
+  const saldoAtual = sorted.length > 0 ? sorted[0].saldo : dados.investimento.saldo;
+
+  // Get sorted by asc for differential calculation
+  const sortedAsc = useMemo(() => [...sorted].reverse(), [sorted]);
 
   return (
     <div className="space-y-5">
@@ -108,18 +168,66 @@ export default function Patrimonio() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sorted.map((h, idx) => {
-                const anterior = idx > 0 ? sorted[idx - 1] : null;
+              {sorted.map((h) => {
+                const ascIdx = sortedAsc.findIndex(x => x.mes === h.mes);
+                const anterior = ascIdx > 0 ? sortedAsc[ascIdx - 1] : null;
                 const diferencial = anterior ? h.saldo - anterior.saldo : 0;
                 const isFechado = h.fechado || h.mes < hoje;
+                const isAtual = h.mes === hoje;
                 return (
-                  <TableRow key={h.mes}>
-                    <TableCell className="capitalize text-xs font-medium">{format(new Date(h.mes + '-01'), "MMM/yy", { locale: ptBR })}</TableCell>
-                    <TableCell>{isFechado ? <Badge variant="secondary" className="text-[9px] h-4 gap-0.5"><Lock className="h-2.5 w-2.5" />Fechado</Badge> : <Badge variant="outline" className="text-[9px] h-4 gap-0.5"><Clock className="h-2.5 w-2.5" />Projeção</Badge>}</TableCell>
-                    <TableCell className="text-right"><Input className="h-6 w-24 text-right text-xs font-mono ml-auto" value={h.saldo} onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v)) updateHistoricoItem(idx, { saldo: v }); }} type="number" step="0.01" /></TableCell>
-                    <TableCell className="text-right">{idx > 0 && <span className={`inline-flex items-center gap-0.5 text-xs font-medium font-mono ${diferencial >= 0 ? 'text-success' : 'text-destructive'}`}>{diferencial >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}{formatarMoeda(Math.abs(diferencial))}</span>}</TableCell>
+                  <TableRow
+                    key={h.mes}
+                    ref={isAtual ? currentRowRef : undefined}
+                    className={isAtual ? 'bg-primary/5 ring-1 ring-primary/20' : ''}
+                  >
+                    <TableCell className="capitalize text-xs font-medium">
+                      {format(new Date(h.mes + '-01'), "MMM/yy", { locale: ptBR })}
+                      {isAtual && <Badge className="ml-1.5 text-[8px] h-3.5 bg-primary">Atual</Badge>}
+                    </TableCell>
+                    <TableCell>
+                      {isFechado
+                        ? <Badge variant="secondary" className="text-[9px] h-4 gap-0.5"><Lock className="h-2.5 w-2.5" />Fechado</Badge>
+                        : <Badge variant="outline" className="text-[9px] h-4 gap-0.5"><Clock className="h-2.5 w-2.5" />Projeção</Badge>}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {editingSaldo === h.mes ? (
+                        <div className="flex items-center gap-1 justify-end">
+                          <Input
+                            className="h-6 w-24 text-right text-xs font-mono"
+                            value={editSaldoValue}
+                            onChange={e => setEditSaldoValue(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') saveSaldoEdit(h.mes); if (e.key === 'Escape') setEditingSaldo(null); }}
+                            autoFocus
+                            inputMode="decimal"
+                          />
+                          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => saveSaldoEdit(h.mes)}>✓</Button>
+                        </div>
+                      ) : (
+                        <button
+                          className="text-xs font-mono font-medium hover:text-primary hover:underline cursor-pointer"
+                          onClick={() => { setEditingSaldo(h.mes); setEditSaldoValue(h.saldo.toString()); }}
+                        >
+                          {formatarMoeda(h.saldo)}
+                        </button>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {anterior && (
+                        <span className={`inline-flex items-center gap-0.5 text-xs font-medium font-mono ${diferencial >= 0 ? 'text-success' : 'text-destructive'}`}>
+                          {diferencial >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                          {formatarMoeda(Math.abs(diferencial))}
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right text-xs text-success font-mono">+{formatarMoeda(h.rendimento)}</TableCell>
-                    <TableCell className="text-right"><button className="text-xs text-primary hover:underline font-mono" onClick={() => { setTaxaDialog({ index: idx, taxa: h.taxa.toString() }); setAplicarFuturos(false); }}>{h.taxa}%</button></TableCell>
+                    <TableCell className="text-right">
+                      <button
+                        className="text-xs text-primary hover:underline font-mono"
+                        onClick={() => { setTaxaDialog({ mes: h.mes, taxa: h.taxa.toString() }); setAplicarFuturos(false); }}
+                      >
+                        {h.taxa}%
+                      </button>
+                    </TableCell>
                   </TableRow>
                 );
               })}
