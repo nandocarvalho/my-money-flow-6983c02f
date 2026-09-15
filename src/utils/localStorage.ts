@@ -24,6 +24,7 @@ function criarDadosIniciais(): DadosFinanceiros {
     { id: 'cat-transporte', nome: 'Transporte', limite: 400, cor: '38 92% 50%', icone: '🚗' },
     { id: 'cat-lazer', nome: 'Lazer', limite: 300, cor: '270 70% 60%', icone: '🎮' },
     { id: 'cat-moradia', nome: 'Moradia', limite: 2000, cor: '200 70% 50%', icone: '🏠' },
+    categoriaSemCategoria(),
   ];
 
   const cartaoId = 'cartao-default';
@@ -97,6 +98,7 @@ function criarDadosIniciais(): DadosFinanceiros {
     fechamentoFatura: { diaPadrao: 4, diaVencimento: 15, overridesMes: {} },
     orcamentoMes: { overridesMes: {} },
     cartoes,
+    regrasCategorizacao: [],
   };
 }
 
