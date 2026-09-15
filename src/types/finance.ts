@@ -9,11 +9,25 @@ export interface Transacao {
   status: 'pago' | 'pendente';
   origemMensalidade?: string; // id da mensalidade que gerou
   cartaoId?: string; // id do cartão de crédito
+  /** Mês da fatura (YYYY-MM) informado explicitamente (ex: importação CSV). Sobrepõe a regra de fechamento. */
+  mesFaturaOverride?: string;
+  /** Categoria original do banco (coluna categoria_bb do CSV) */
+  categoriaBb?: string;
   parcela?: {
     atual: number;
     total: number;
     grupoId: string;
+    /** Valor total da compra (parcela * total) */
+    valorTotal?: number;
   };
+}
+
+export const CATEGORIA_SEM_ID = 'cat-sem-categoria';
+
+export interface RegraCategorizacao {
+  id: string;
+  palavraChave: string;
+  categoriaId: string;
 }
 
 export interface Categoria {
@@ -87,4 +101,5 @@ export interface DadosFinanceiros {
   fechamentoFatura: FechamentoFaturaConfig;
   orcamentoMes: OrcamentoMesConfig;
   cartoes: CartaoCredito[];
+  regrasCategorizacao: RegraCategorizacao[];
 }

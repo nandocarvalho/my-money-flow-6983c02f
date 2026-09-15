@@ -21,3 +21,14 @@ export function mesFaturaCartao(dataTransacao: string, config: FechamentoFaturaC
   }
   return mesCorrente;
 }
+
+/**
+ * Mês da fatura de uma transação: respeita o override vindo do CSV,
+ * caindo para a regra padrão de fechamento quando não houver.
+ */
+export function mesFaturaDe(
+  t: { data: string; mesFaturaOverride?: string },
+  config: FechamentoFaturaConfig
+): string {
+  return t.mesFaturaOverride || mesFaturaCartao(t.data, config);
+}
