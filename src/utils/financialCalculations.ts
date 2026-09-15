@@ -1,6 +1,6 @@
 import { Transacao, Investimento, HistoricoInvestimento, DadosFinanceiros } from '@/types/finance';
 import { addMonths, format } from 'date-fns';
-import { mesFaturaCartao } from './fechamentoFatura';
+import { mesFaturaDe } from './fechamentoFatura';
 
 export function gerarParcelas(
   baseTransacao: Omit<Transacao, 'id' | 'parcela'>,
@@ -61,7 +61,7 @@ export function calcularSaldoMes(transacoes: Transacao[], mes: string, dados?: D
     despesasList = transacoes.filter(t => {
       if (t.tipo !== 'despesa') return false;
       if (t.formaPagamento === 'cartao') {
-        return mesFaturaCartao(t.data, dados.fechamentoFatura) === mes;
+        return mesFaturaDe(t, dados.fechamentoFatura) === mes;
       }
       return t.data.startsWith(mes);
     });
@@ -85,7 +85,7 @@ export function calcularGastoPorCategoria(transacoes: Transacao[], mes: string, 
     despesasDoMes = transacoes.filter(t => {
       if (t.tipo !== 'despesa') return false;
       if (t.formaPagamento === 'cartao') {
-        return mesFaturaCartao(t.data, dados.fechamentoFatura) === mes;
+        return mesFaturaDe(t, dados.fechamentoFatura) === mes;
       }
       return t.data.startsWith(mes);
     });
@@ -112,7 +112,7 @@ export function getDespesasDoMesPorCategoria(transacoes: Transacao[], mes: strin
     return transacoes.filter(t => {
       if (t.tipo !== 'despesa' || t.categoriaId !== categoriaId) return false;
       if (t.formaPagamento === 'cartao') {
-        return mesFaturaCartao(t.data, dados.fechamentoFatura) === mes;
+        return mesFaturaDe(t, dados.fechamentoFatura) === mes;
       }
       return t.data.startsWith(mes);
     });

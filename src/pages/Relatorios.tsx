@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
 import { calcularSaldoMes, calcularGastoPorCategoria, formatarMoeda } from '@/utils/financialCalculations';
-import { mesFaturaCartao } from '@/utils/fechamentoFatura';
+import { mesFaturaDe } from '@/utils/fechamentoFatura';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -85,7 +85,7 @@ export default function Relatorios() {
     // Split despesas: avista vs parcelado
     const despesasMes = dados.transacoes.filter(t => {
       if (t.tipo !== 'despesa') return false;
-      if (t.formaPagamento === 'cartao') return mesFaturaCartao(t.data, dados.fechamentoFatura) === mes;
+      if (t.formaPagamento === 'cartao') return mesFaturaDe(t, dados.fechamentoFatura) === mes;
       return t.data.startsWith(mes);
     });
     const despAvista = despesasMes.filter(t => !t.parcela).reduce((s, t) => s + t.valor, 0);
@@ -116,7 +116,7 @@ export default function Relatorios() {
 
   // Credit card curve data
   const cardCurveData = useMemo(() => activeMeses.map(mes => {
-    const cardTrans = dados.transacoes.filter(t => t.formaPagamento === 'cartao' && t.tipo === 'despesa' && mesFaturaCartao(t.data, dados.fechamentoFatura) === mes);
+    const cardTrans = dados.transacoes.filter(t => t.formaPagamento === 'cartao' && t.tipo === 'despesa' && mesFaturaDe(t, dados.fechamentoFatura) === mes);
     const total = cardTrans.reduce((s, t) => s + t.valor, 0);
     const avista = cardTrans.filter(t => !t.parcela).reduce((s, t) => s + t.valor, 0);
     const parcelado = cardTrans.filter(t => !!t.parcela).reduce((s, t) => s + t.valor, 0);

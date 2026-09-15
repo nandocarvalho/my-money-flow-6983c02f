@@ -1,7 +1,11 @@
-import { DadosFinanceiros, Transacao, Categoria, Investimento, ReceitaConfig, Mensalidade, FechamentoFaturaConfig, OrcamentoMesConfig, CartaoCredito } from '@/types/finance';
+import { DadosFinanceiros, Transacao, Categoria, Investimento, ReceitaConfig, Mensalidade, FechamentoFaturaConfig, OrcamentoMesConfig, CartaoCredito, CATEGORIA_SEM_ID } from '@/types/finance';
 import { format, subMonths, addMonths } from 'date-fns';
 
 const STORAGE_KEY = 'financas_pessoais';
+
+export function categoriaSemCategoria(): Categoria {
+  return { id: CATEGORIA_SEM_ID, nome: 'Sem Categoria', limite: 0, cor: '220 9% 46%', icone: '❓' };
+}
 
 function gerarId(): string {
   return crypto.randomUUID();
@@ -20,6 +24,7 @@ function criarDadosIniciais(): DadosFinanceiros {
     { id: 'cat-transporte', nome: 'Transporte', limite: 400, cor: '38 92% 50%', icone: '🚗' },
     { id: 'cat-lazer', nome: 'Lazer', limite: 300, cor: '270 70% 60%', icone: '🎮' },
     { id: 'cat-moradia', nome: 'Moradia', limite: 2000, cor: '200 70% 50%', icone: '🏠' },
+    categoriaSemCategoria(),
   ];
 
   const cartaoId = 'cartao-default';
@@ -93,6 +98,7 @@ function criarDadosIniciais(): DadosFinanceiros {
     fechamentoFatura: { diaPadrao: 4, diaVencimento: 15, overridesMes: {} },
     orcamentoMes: { overridesMes: {} },
     cartoes,
+    regrasCategorizacao: [],
   };
 }
 
@@ -103,6 +109,10 @@ export function carregarDados(): DadosFinanceiros {
       const parsed = JSON.parse(raw);
       // Migration: add new fields if missing
       if (!parsed.mensalidades) parsed.mensalidades = [];
+      if (!parsed.regrasCategorizacao) parsed.regrasCategorizacao = [];
+      if (!parsed.categorias?.some((c: any) => c.id === CATEGORIA_SEM_ID)) {
+        parsed.categorias = [...(parsed.categorias || []), categoriaSemCategoria()];
+      }
       if (!parsed.fechamentoFatura) parsed.fechamentoFatura = { diaPadrao: 4, diaVencimento: 15, overridesMes: {} };
       if (!parsed.orcamentoMes) parsed.orcamentoMes = { overridesMes: {} };
       if (!parsed.cartoes) {
