@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
 import { formatarMoeda } from '@/utils/financialCalculations';
-import { mesFaturaCartao } from '@/utils/fechamentoFatura';
+import { mesFaturaDe } from '@/utils/fechamentoFatura';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -38,8 +38,8 @@ export default function Parcelamentos() {
       const isCartao = sorted[0].formaPagamento === 'cartao';
 
       // First and last fatura months
-      const primeiraFatura = isCartao ? mesFaturaCartao(sorted[0].data, dados.fechamentoFatura) : sorted[0].data.substring(0, 7);
-      const ultimaFatura = isCartao ? mesFaturaCartao(sorted[sorted.length - 1].data, dados.fechamentoFatura) : sorted[sorted.length - 1].data.substring(0, 7);
+      const primeiraFatura = isCartao ? mesFaturaDe(sorted[0], dados.fechamentoFatura) : sorted[0].data.substring(0, 7);
+      const ultimaFatura = isCartao ? mesFaturaDe(sorted[sorted.length - 1], dados.fechamentoFatura) : sorted[sorted.length - 1].data.substring(0, 7);
 
       return { grupoId, descricao: sorted[0].descricao, parcelas: sorted, totalParcelas, pagas, pendentes: totalParcelas - pagas, valorTotal, valorParcela, primeiraFatura, ultimaFatura, encerrado, cat, isCartao, formaPagamento: sorted[0].formaPagamento, data: sorted[0].data };
     });

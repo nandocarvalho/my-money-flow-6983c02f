@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
 import { formatarMoeda } from '@/utils/financialCalculations';
-import { mesFaturaCartao } from '@/utils/fechamentoFatura';
+import { mesFaturaDe } from '@/utils/fechamentoFatura';
 import { CartaoCredito as CartaoCreditoType, Transacao } from '@/types/finance';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -65,7 +65,7 @@ export default function CartaoCreditoPage() {
     meses.forEach(m => garantirTransacoesMes(m));
 
     return meses.map(mes => {
-      const lctos = cardTransacoes.filter(t => t.tipo === 'despesa' && mesFaturaCartao(t.data, dados.fechamentoFatura) === mes);
+      const lctos = cardTransacoes.filter(t => t.tipo === 'despesa' && mesFaturaDe(t, dados.fechamentoFatura) === mes);
       const avista = lctos.filter(t => !t.parcela);
       const parcelado = lctos.filter(t => !!t.parcela);
       const total = lctos.reduce((s, t) => s + t.valor, 0);

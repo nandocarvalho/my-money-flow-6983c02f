@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
 import { formatarMoeda } from '@/utils/financialCalculations';
-import { mesFaturaCartao } from '@/utils/fechamentoFatura';
+import { mesFaturaDe } from '@/utils/fechamentoFatura';
 import { Transacao } from '@/types/finance';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -327,7 +327,7 @@ export default function LancamentoDetailDialog({ transacao, open, onOpenChange, 
               <div className="max-h-64 overflow-y-auto space-y-1">
                 {parcelas.map(p => {
                   const mesFatura = p.formaPagamento === 'cartao'
-                    ? mesFaturaCartao(p.data, dados.fechamentoFatura)
+                    ? mesFaturaDe(p, dados.fechamentoFatura)
                     : p.data.substring(0, 7);
                   return (
                     <div key={p.id} className={`flex items-center justify-between p-3 rounded-lg text-sm ${p.id === transacao.id ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted/50'}`}>

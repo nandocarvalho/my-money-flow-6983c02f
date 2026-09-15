@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
 import { formatarMoeda } from '@/utils/financialCalculations';
-import { mesFaturaCartao } from '@/utils/fechamentoFatura';
+import { mesFaturaDe } from '@/utils/fechamentoFatura';
 import { format, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Card, CardContent } from '@/components/ui/card';
@@ -48,7 +48,7 @@ export default function Lancamentos() {
       if (t.tipo === 'receita') return false;
       if (filtroCartao && t.formaPagamento !== 'cartao') return false;
       if (filtroMensalidade && !t.origemMensalidade) return false;
-      if (t.formaPagamento === 'cartao') return mesFaturaCartao(t.data, dados.fechamentoFatura) === mesKey;
+      if (t.formaPagamento === 'cartao') return mesFaturaDe(t, dados.fechamentoFatura) === mesKey;
       return t.data.startsWith(mesKey);
     });
     filtered.sort((a, b) => {
