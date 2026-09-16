@@ -13,12 +13,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, CreditCard, DollarSign, Receipt, Layers, Plus, Upload, ChevronDown, CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CreditCard, DollarSign, Receipt, Layers, Plus, Upload, Download, ChevronDown, CalendarDays } from 'lucide-react';
 import NovoLancamentoDialog from '@/components/NovoLancamentoDialog';
 import CsvImportDialog from '@/components/CsvImportDialog';
 import LancamentoDetailDialog from '@/components/LancamentoDetailDialog';
 import NovaMensalidadeDialog from '@/components/NovaMensalidadeDialog';
-import { Transacao } from '@/types/finance';
+import { Transacao, CATEGORIA_SEM_ID } from '@/types/finance';
 
 type Ordenacao = 'data' | 'valor' | 'categoria' | 'status';
 
@@ -27,6 +27,7 @@ export default function Lancamentos() {
   const [mesRef, setMesRef] = useState(new Date());
   const [filtroCartao, setFiltroCartao] = useState(false);
   const [filtroMensalidade, setFiltroMensalidade] = useState(false);
+  const [filtroSemCategoria, setFiltroSemCategoria] = useState(false);
   const [ordenacao, setOrdenacao] = useState<Ordenacao>('data');
   const [novoDialogOpen, setNovoDialogOpen] = useState(false);
   const [novoDialogTipo, setNovoDialogTipo] = useState<'avista' | 'parcelado'>('avista');
@@ -48,6 +49,7 @@ export default function Lancamentos() {
       if (t.tipo === 'receita') return false;
       if (filtroCartao && t.formaPagamento !== 'cartao') return false;
       if (filtroMensalidade && !t.origemMensalidade) return false;
+      if (filtroSemCategoria && t.categoriaId && t.categoriaId !== CATEGORIA_SEM_ID) return false;
       if (t.formaPagamento === 'cartao') return mesFaturaDe(t, dados.fechamentoFatura) === mesKey;
       return t.data.startsWith(mesKey);
     });
@@ -60,7 +62,7 @@ export default function Lancamentos() {
       }
     });
     return filtered;
-  }, [dados.transacoes, mesKey, filtroCartao, filtroMensalidade, ordenacao, dados.fechamentoFatura]);
+  }, [dados.transacoes, mesKey, filtroCartao, filtroMensalidade, filtroSemCategoria, ordenacao, dados.fechamentoFatura]);
 
   const avistaCredito = lancamentosMes.filter(t => !t.parcela && !t.origemMensalidade && t.formaPagamento === 'cartao');
   const parceladoCredito = lancamentosMes.filter(t => !!t.parcela && t.formaPagamento === 'cartao');
@@ -112,6 +114,33 @@ export default function Lancamentos() {
   };
 
   const isCartao = (t: Transacao) => t.formaPagamento === 'cartao';
+
+  const exportarCsv = () => {
+    if (lancamentosMes.length === 0) { toast.error('Nenhuma despesa neste mês'); return; }
+    const esc = (v: string) => /[,;"\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+    const header = 'nome,valor,categoria,data_compra,tipo,parcelamento,mes_fatura';
+    const linhas = lancamentosMes.map(t => {
+      const cat = dados.categorias.find(c => c.id === t.categoriaId);
+      const mesFat = t.formaPagamento === 'cartao' ? mesFaturaDe(t, dados.fechamentoFatura) : t.data.substring(0, 7);
+      return [
+        esc(t.descricao),
+        t.valor.toFixed(2).replace('.', ','),
+        esc(cat?.nome || 'Sem Categoria'),
+        format(new Date(t.data + 'T12:00:00'), 'dd/MM/yyyy'),
+        t.parcela ? 'parcelado' : 'a vista',
+        t.parcela ? `${String(t.parcela.atual).padStart(2, '0')}/${String(t.parcela.total).padStart(2, '0')}` : '',
+        mesFat,
+      ].join(',');
+    });
+    const blob = new Blob(['\uFEFF' + [header, ...linhas].join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `fatura-${mesKey}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`${lancamentosMes.length} despesas exportadas`);
+  };
 
   const renderItem = (t: Transacao) => {
     const cat = dados.categorias.find(c => c.id === t.categoriaId);
@@ -167,6 +196,10 @@ export default function Lancamentos() {
           <Label htmlFor="fc" className="text-xs cursor-pointer">Cartão</Label>
         </div>
         <div className="flex items-center gap-1.5">
+          <Switch checked={filtroSemCategoria} onCheckedChange={setFiltroSemCategoria} id="fs" className="scale-75" />
+          <Label htmlFor="fs" className="text-xs cursor-pointer">Sem categoria</Label>
+        </div>
+        <div className="flex items-center gap-1.5">
           <Switch checked={filtroMensalidade} onCheckedChange={v => { setFiltroMensalidade(v); if (v) setFiltroCartao(false); }} id="fm" className="scale-75" />
           <Label htmlFor="fm" className="text-xs cursor-pointer">Mensalidades</Label>
         </div>
@@ -210,9 +243,14 @@ export default function Lancamentos() {
         </Card>
       </div>
 
-      <Button variant="outline" size="sm" onClick={() => setCsvDialogOpen(true)} className="gap-1.5 h-7 text-xs">
-        <Upload className="h-3 w-3" /> Importar Lctos Cred a Vista
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" onClick={() => setCsvDialogOpen(true)} className="gap-1.5 h-7 text-xs">
+          <Upload className="h-3 w-3" /> Importar CSV
+        </Button>
+        <Button variant="outline" size="sm" onClick={exportarCsv} className="gap-1.5 h-7 text-xs">
+          <Download className="h-3 w-3" /> Exportar Fatura (CSV)
+        </Button>
+      </div>
 
       {/* Grouped items as collapsible */}
       <div className="space-y-3">
