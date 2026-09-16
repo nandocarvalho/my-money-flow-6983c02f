@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Wand2 } from 'lucide-react';
 
 const CORES_DISPONIVEIS = [
   '142 71% 45%', '0 84% 60%', '221 83% 53%', '38 92% 50%',
@@ -23,6 +24,32 @@ export default function Categorias() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ nome: '', limite: '', cor: CORES_DISPONIVEIS[0], icone: '🛒' });
+  const [novaRegra, setNovaRegra] = useState({ palavraChave: '', categoriaId: '' });
+
+  const regras = dados.regrasCategorizacao || [];
+
+  const adicionarRegra = () => {
+    const chave = novaRegra.palavraChave.trim();
+    if (!chave || !novaRegra.categoriaId) {
+      toast.error('Informe a palavra-chave e a categoria');
+      return;
+    }
+    if (regras.some(r => r.palavraChave.toLowerCase() === chave.toLowerCase())) {
+      toast.error('Já existe uma regra com essa palavra-chave');
+      return;
+    }
+    atualizarDados({
+      ...dados,
+      regrasCategorizacao: [...regras, { id: crypto.randomUUID(), palavraChave: chave, categoriaId: novaRegra.categoriaId }],
+    });
+    setNovaRegra({ palavraChave: '', categoriaId: '' });
+    toast.success('Regra criada!');
+  };
+
+  const removerRegra = (id: string) => {
+    atualizarDados({ ...dados, regrasCategorizacao: regras.filter(r => r.id !== id) });
+    toast.success('Regra removida');
+  };
 
   const mesAtual = format(new Date(), 'yyyy-MM');
   const gastos = calcularGastoPorCategoria(dados.transacoes, mesAtual);
