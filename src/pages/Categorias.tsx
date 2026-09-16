@@ -156,6 +156,58 @@ export default function Categorias() {
         })}
       </div>
 
+      {/* Regras de categorização automática */}
+      <Card>
+        <CardContent className="p-4 space-y-4">
+          <div className="flex items-center gap-2">
+            <Wand2 className="h-4 w-4 text-primary" />
+            <div>
+              <h2 className="font-semibold text-sm">Regras de Categorização</h2>
+              <p className="text-xs text-muted-foreground">Palavras-chave que categorizam automaticamente na importação</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Input
+              value={novaRegra.palavraChave}
+              onChange={e => setNovaRegra(r => ({ ...r, palavraChave: e.target.value }))}
+              placeholder="Palavra-chave (ex: PANI E PAO)"
+              className="flex-1 h-9 text-sm"
+            />
+            <Select value={novaRegra.categoriaId} onValueChange={v => setNovaRegra(r => ({ ...r, categoriaId: v }))}>
+              <SelectTrigger className="h-9 sm:w-52 text-sm"><SelectValue placeholder="Categoria" /></SelectTrigger>
+              <SelectContent>
+                {dados.categorias.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.icone} {c.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button size="sm" className="h-9" onClick={adicionarRegra}><Plus className="h-4 w-4 mr-1" /> Adicionar</Button>
+          </div>
+
+          {regras.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-3">Nenhuma regra cadastrada</p>
+          ) : (
+            <div className="divide-y divide-border/50">
+              {regras.map(r => {
+                const cat = dados.categorias.find(c => c.id === r.categoriaId);
+                return (
+                  <div key={r.id} className="flex items-center justify-between py-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm font-mono truncate">{r.palavraChave}</span>
+                      <span className="text-xs text-muted-foreground">→ {cat?.icone} {cat?.nome || 'categoria removida'}</span>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removerRegra(r.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
